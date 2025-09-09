@@ -1,0 +1,68 @@
+ /* fondo y altura del header del producto */
+ .header-h {
+     background-color: #6a5e9b;
+     height: 100px;
+ }
+
+ /* Estilos personalizados para texto del producto */
+ .product-title {
+     font-weight: 700;  /* Negrita para el título del producto */
+     color: #f4f3f2;  /* Color para el texto del producto */
+ }
+
+ .product-detail-text,
+ .modal-title{
+     color: #2e2e84;
+ }
+
+ .back-btn {
+     background-color: #1f88e6; /* Cambia el color del fondo*/
+     border-color: #2e2e84; /* Cambia el color del borde*/
+     color: #f4f3f2; /* Cambia el color del texto */
+ }
+
+.back-btn:hover {
+     background-color: #2e2e84; /* Cambia el fondo al pasar el ratón */
+     color: #f4f3f2; /* Cambia el color del texto */
+ }
+
+ /* Estilos específicos para la galería de imágenes */
+ .gallery-main-image {
+     width: 100%;
+     height: auto; /* Altura para la imagen principal */
+     object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+     border-radius: 0.5rem;
+ }
+
+ .gallery-thumbnail {
+     width: 100%;
+     height: auto; /* Altura para las miniaturas */
+     object-fit: cover;
+     border-radius: 0.5rem;
+     cursor: pointer;
+     transition: transform 0.2s ease-in-out;
+ }
+
+ .gallery-thumbnail:hover {
+     transform: scale(1.05);
+ }
+
+ /* Estilo para el modal de galería completa */
+ .modal-body {
+     display: flex;
+     flex-wrap: wrap;
+     gap: 1rem;
+     justify-content: center;
+ }
+
+ .modal-body img {
+     max-width: 100%;
+     height: auto;
+     border-radius: 0.5rem;
+ }
+
+ .detail-content-section {
+     background-color: #f4f3f2;
+     box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
+ }
+

@@ -1,0 +1,49 @@
+ /* Estilos para el footer */
+ footer {
+     /* Color de fondo para el footer */
+     background-color: #6a5e9b;
+     /* Sombra superior */
+     box-shadow: 0 -0.125rem 0.25rem rgba(46, 46, 132, 0.8);
+     /* Padding superior e inferior */
+     padding: 1.5rem 0;
+ }
+
+ .social-icons a {
+     /* Color de los iconos sociales */
+     color: #f4f3f2;
+     /* Tamaño de los iconos */
+     font-size: 1.5rem;
+     /* Espacio entre iconos */
+     margin-left: 1rem;
+     transition: color 0.2s ease-in-out;
+ }
+
+ .social-icons a:hover {
+     /* Color al pasar el ratón */
+     color: #2e2e84;
+ }
+
+ .text-copy-right {
+    /* Color del texto del copy-right */
+     color: #f4f3f2;
+ }
+
+ .footer-logo-img {
+    /* ato y ancho del logo */
+     height: 18%;
+     width: 18%;
+ }
+
+ .footer-logo-text {
+     /* Negrita para el logo */
+     font-weight: 700;
+     /* Color para el texto del logo */
+     color: #f4f3f2;
+ }
+
+ .footer-slogan-text {
+     /* tamaño para el lema */
+     font-weight: 400;
+     /* Color para el lema */
+     color: #f4f3f2;
+ }

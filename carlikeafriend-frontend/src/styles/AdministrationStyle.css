@@ -1,0 +1,126 @@
+ /* Estilos para los botones */
+        .form-btn{
+            background-color: #1f88e6; /* Cambia el color del fondo*/
+            border-color: #2e2e84; /* Cambia el color del borde*/
+            color: #f4f3f2; /* Cambia el color del texto */
+        }
+
+        .mobile-warning-btn{
+            background-color: #f4f3f2;
+            border-color:#1f88e6; /* Cambia el color del borde*/ 
+            color:  #2e2e84;          
+        }
+
+        .mobile-warning-btn:hover{
+             background-color:  #1f88e6;
+             color:  #f4f3f2;
+        }
+
+        .form-btn:hover{
+            background-color: #2e2e84; /* Cambia el fondo al pasar el ratón */
+            color: #f4f3f2; /* Cambia el color del texto */
+        }
+
+        .card-background,
+        .list-group-item {
+            background-color: #f4f3f2;
+        }
+
+        /* Estilo para el modal de mensaje (personalizado, ya que no usamos alert()) */
+        .confirm-modal {
+            display: none; /* Oculto por defecto */
+            position: fixed; /* Fijo en la pantalla */
+            z-index: 1050; /* Por encima de otros modales si los hubiera */
+            left: 0;
+            top: 0;
+            width: 100%; /* Ancho completo */
+            height: 100%; /* Alto completo */
+            overflow: auto; /* Habilitar scroll si es necesario */
+            background-color: rgba(46, 46, 132, 0.075); /* Fondo semi-transparente */
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .confirm-modal-content {
+            background-color: #f4f3f2;
+            color: #2e2e84;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
+            width: 80%; /* Ancho responsivo */
+            max-width: 400px;
+            text-align: center;
+            position: relative; /* Necesario para el botón de cerrar */
+        }
+
+        .confirm-modal-close {
+            color: #6a5e9b;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+        }
+
+        
+        .confirm-modal-close:hover,
+        .confirm-modal-close:focus {
+            color: #2e2e84;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+
+        /* Estilos para el mensaje de no responsivo */
+        #mobile-warning {
+            display: flex; /* Oculto por defecto */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(46, 46, 132, 0.99);
+            color: #f4f3f2;
+            text-align: center;
+            padding: 20px;
+            z-index: 9999;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+/*
+        @media (max-width: 767.98px) { /* Para dispositivos móviles, ajusta según sea necesario 
+            #admin-panel-content {
+                display: none; /* Oculta el contenido del panel en móviles 
+            }
+            #mobile-warning {
+                display: flex; /* Muestra la advertencia en móviles 
+            }
+        }
+*/
+        /* icono del mensaje de advertencia */
+        .bi-exclamation-triangle-fill{
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* color de texto */
+        .card-text,
+        .form-title,
+        .form-text,
+        .text-admin-panel,
+        label.form-label,
+        .text-product-list {
+            color: #2e2e84;
+        }
+
+        /* color de fondo y texto para el Munú Funciones */
+        .card-header{
+            background-color: #1f88e6;
+            color: #f4f3f2;
+        }
+
+       

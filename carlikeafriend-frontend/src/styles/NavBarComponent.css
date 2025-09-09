@@ -1,0 +1,39 @@
+/* Ajuste para el header fijo */
+        .fixed-top {
+            box-shadow: 0 0.125rem 0.25rem rgb(46, 46, 132, 0.8); /* Sombra */
+            border-bottom-left-radius: 0.5rem; 
+            border-bottom-right-radius: 0.5rem; 
+        }
+
+        .header-btn {
+            background-color: #1f88e6; /* Cambia el color del fondo*/
+            border-color: #2e2e84; /* Cambia el color del borde*/
+            color: #f4f3f2; /* Cambia el color del texto */
+        }
+
+        .header-btn:hover {
+            background-color: #2e2e84; /* Cambia el fondo al pasar el ratón */
+            color: #f4f3f2; /* Cambia el color del texto */
+        }
+
+        .header-color { /* color de fondo del header */
+            background-color: #6a5e9b;
+        }
+
+        .header-logo-img{ /* Tamaño del logo del header */
+            height: 40%;
+            width: 40%;
+        }
+
+        .header-logo-text {
+            font-weight: 700; /* Negrita para el logo */
+            color: #f4f3f2; /* Color para el texto del logo */
+        }
+
+        .header-slogan-text {
+            font-weight: 400; /* Normal para el lema */
+            color: #f4f3f2; /* Color para el lema */
+        }
+
+
+/* 320px -  768px - 1024px

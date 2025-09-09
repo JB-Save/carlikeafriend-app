@@ -1,0 +1,6 @@
+ 
+        main { /* Estilo para el main: 100% de alto y color de fondo */
+            flex-grow: 1; /* Permite que el main ocupe el espacio restante */
+            background-color: #70acde; /* Color de fondo que armoniza con la marca */
+            padding-bottom: 2rem; /* Añade un poco de padding en la parte inferior */
+        }
