@@ -76,7 +76,7 @@ export const ProductListComponent = () => {
                 <DeleteConfirmationModalComponent
                     id={productIdToDelete}
                     deleteFunction={deleteFunction}
-                    onClose={(e) => {e.stopPropagation(); setProductIdToDelete(null)}}
+                    onClose={() => setProductIdToDelete(null)}
                 />
             )}
         </div>
