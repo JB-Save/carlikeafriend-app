@@ -1,8 +1,12 @@
 body {
-            font-family: Arial, Helvetica, sans-serif;
-            padding-top: 120px; /* Ajusta el padding superior del cuerpo para que el contenido no quede debajo del encabezado fijo */
-            background-color: #f4f3f2; /* Un color de fondo suave general para el cuerpo */
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh; /* Asegura que el body ocupe al menos el 100% del alto de la ventana */
-        }
+    font-family: Arial, Helvetica, sans-serif;
+    /* Ajusta el padding superior del cuerpo para que el contenido no quede debajo del encabezado fijo */
+    padding-top: 120px;
+    /* Un color de fondo suave general para el cuerpo */
+    background-color: #f4f3f2;
+    display: flex;
+    flex-direction: column;
+    /* Asegura que el body ocupe al menos el 100% del alto de la ventana */
+    min-height: 100vh;
+
+}

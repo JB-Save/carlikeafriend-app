@@ -1,7 +1,7 @@
  /*Buscador*/
 
  .search-btn,
- .detail-btn{
+ .detail-btn {
      /* Cambia el color del fondo*/
      background-color: #1f88e6;
      /* Cambia el color del borde*/
@@ -18,29 +18,44 @@
      color: #f4f3f2;
  }
 
- .search-form{
-    border: 2px solid #2e2e84;
-    border-radius: 8px;
-    padding: 1.5rem;
-    background-color: #f4f3f2
+ .filter-btn {
+     background-color: #2e2e84 !important;
+     color: #f4f3f2 !important;
  }
 
-input::placeholder {
+ .search-form {
+     border: 2px solid #2e2e84;
+     border-radius: 8px;
+     padding: 1.5rem;
+     background-color: #f4f3f2
+ }
+
+ input::placeholder {
      /* Cambia el color del texto */
      color: #2e2e84 !important;
      ;
  }
 
  /* Cambio color de texto */
+
+
  .card-title,
  .category-text,
  .search-text,
- .recommendation-text{
+ .recommendation-text {
      color: #2e2e84;
  }
 
- .card-background{
-    background-color: #f4f3f2;
+ .card-text {
+     color: #2e2e84;
+     text-align: justify;
+     line-height: 1.2;
+     font-weight: lighter;
+     font-size: 1rem;
+ }
+
+ .card-background {
+     background-color: #f4f3f2;
  }
 
  .text-muted {
@@ -48,10 +63,10 @@ input::placeholder {
      color: #6a5e9b !important;
  }
 
-  /* Cambia el color del borde del spinner */
-  .text-primary {
-          color: #2e2e84 !important;
-        }
+ /* Cambia el color del borde del spinner */
+ .text-primary {
+     color: #2e2e84 !important;
+ }
 
  /* Paginación */
  .page-link {
@@ -59,11 +74,25 @@ input::placeholder {
      background-color: #f4f3f2;
  }
 
- .pagination>li.active>a {
-     background-color: #1f88e6;
-     color: #f4f3f2;
+ .pagination>li.active>a,
+ .badge-color,
+ .nav-link.active {
+     background-color: #1f88e6 !important;
+     color: #f4f3f2 !important;
  }
 
  .card-shadow {
      box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
+ }
+
+ /*Asegurar que el cursor cambie en la sección de categorías del home*/
+ .cursor-pointer {
+     cursor: pointer !important;
+ }
+
+  /*Efecto para la sección de categorías del home*/
+ .card-categories-home:hover {
+     transition: box-shadow 0.3s ease-in-out, transform 0.1s ease-in-out;
+     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.13) !important;
+     transform: translateY(-2px);
  }

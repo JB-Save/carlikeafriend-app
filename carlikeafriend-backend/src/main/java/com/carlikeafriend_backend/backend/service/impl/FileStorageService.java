@@ -20,45 +20,48 @@ public class FileStorageService implements IFileStorageService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    public String storeFile(MultipartFile file){
+    public String storeFile(MultipartFile file, String folder) throws IOException {
         // Normaliza el nombre del archivo para evitar problemas de ruta
         // Usamos UUID para asegurar nombres únicos
         String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
 
         try {
-            Path targetLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Path targetLocation = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(folder);
             Files.createDirectories(targetLocation); // Asegura que el directorio de destino exista
             Path filePath = targetLocation.resolve(fileName);
             Files.copy(file.getInputStream(), filePath);
-            // Retorna la ruta relativa que se guardará en la DB (ej. /image/uuid_nombre.jpg)
-            return "/image/" + fileName;
+            // Retorna la ruta relativa que se guardará en la DB (ej. /image/folder/uuid_nombre.jpg)
+            return "/image/" + folder +"/"+ fileName;
         } catch (IOException ex) {
-            throw new RuntimeException("No se pudo almacenar el archivo " + fileName + ". Por favor, intente de nuevo!", ex);
+            throw new IOException("No se pudo almacenar el archivo " + fileName + ". Por favor, intente de nuevo!", ex);
         }
     }
 
-    public Resource loadFileAsResource(String fileName){
+    public Resource loadFileAsResource(String fileName, String folder) throws IOException {
         try {
-            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName);
+            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(folder).resolve(fileName);
+            // Creamos el recurso desde el URI de la ruta
             Resource resource = new UrlResource(filePath.toUri());
 
-            if (resource.exists() && resource.isReadable()) {
+            if (resource.exists() || resource.isReadable()) {
                 return resource;
             } else {
-                throw new RuntimeException("El archivo no se pudo encontrar o leer: " + fileName);
+                throw new IOException("El archivo no se pudo encontrar o leer en la carpeta " + folder +": " +fileName);
             }
         } catch (MalformedURLException ex) {
-            throw new RuntimeException("Error en la URL del archivo: " + fileName, ex);
+            throw new IOException("Error en la URL del archivo: " + fileName, ex);
         }
     }
 
-    public void deleteFile(String fileName){
+    public void deleteFile(String fullPath) throws IOException {
         try {
-            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName.replace("/image/", ""));
+            // fullPath viene como "/image/folder/archivo.jpg"
+            // Reemplazamos "/image/" por nada para obtener "folder/archivo.jpg"
+            String relativePath = fullPath.replace("/image/", "");
+            Path filePath = Paths.get(uploadDir).toAbsolutePath().normalize().resolve(relativePath);
             Files.deleteIfExists(filePath);
         } catch (IOException ex) {
-            // Registra el error, pero no necesariamente genera una excepción si el archivo no existe
-            System.err.println("No se pudo eliminar el archivo " + fileName + ": " + ex.getMessage());
+            throw new IOException("No se pudo eliminar el archivo " + fullPath + ": " + ex.getMessage(), ex);
         }
     }
 }

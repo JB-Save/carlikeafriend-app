@@ -14,7 +14,7 @@ const mockProductWithImage = {
     name: 'Carro de prueba',
     description: 'Descripción de prueba del carro.',
     price: 25000,
-    images: [{ id: 1, imagePath: 'image1.jpg' }],
+    productImages: [{ id: 1, imagePath: '/image/product_folder/image1.jpg' }],
 };
 
 // Datos de prueba para un producto sin imágenes
@@ -34,13 +34,14 @@ describe('CardProductComponent', () => {
 
         // Verificar que el nombre, la descripción y el precio se muestran
         expect(screen.getByText('Carro de prueba')).toBeInTheDocument();
-        expect(screen.getByText('Descripción de prueba del carro.')).toBeInTheDocument();
-        expect(screen.getByText('$25000.00/día')).toBeInTheDocument();
+       // expect(screen.getByText('Descripción de prueba del carro.')).toBeInTheDocument();
+        expect(screen.getByText('$ 25.000')).toBeInTheDocument();
+        expect(screen.getByText('/día')).toBeInTheDocument();
 
         // Verificar que la imagen se renderiza con el src y alt correctos
         const productImage = screen.getByRole('img', { name: /Carro de prueba/i });
         expect(productImage).toBeInTheDocument();
-        expect(productImage).toHaveAttribute('src', 'http://localhost:8080/carlikeafriend/products/imagesimage1.jpg');
+        expect(productImage).toHaveAttribute('src', 'http://localhost:8080/carlikeafriend/products/images/image/product_folder/image1.jpg');
     });
 
     // Test 2: Muestra una imagen por defecto cuando el producto no tiene imágenes

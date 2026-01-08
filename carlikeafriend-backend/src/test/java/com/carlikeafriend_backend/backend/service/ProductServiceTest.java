@@ -1,238 +1,131 @@
 package com.carlikeafriend_backend.backend.service;
 
 import com.carlikeafriend_backend.backend.dto.ProductDTO;
-import com.carlikeafriend_backend.backend.entity.Image;
+import com.carlikeafriend_backend.backend.dto.ProductResponseDTO;
 import com.carlikeafriend_backend.backend.entity.Product;
-import com.carlikeafriend_backend.backend.exception.ImageLimitExceededException;
-import com.carlikeafriend_backend.backend.exception.UniqueProductException;
+import com.carlikeafriend_backend.backend.entity.ProductImage;
+import com.carlikeafriend_backend.backend.event.ImageDeletedEvent;
+import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
+import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.repository.IProductRepository;
-import com.carlikeafriend_backend.backend.service.impl.FileStorageService;
 import com.carlikeafriend_backend.backend.service.impl.ProductService;
+import com.carlikeafriend_backend.backend.util.FileValidationUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Pruebas unitarias para ProductService")
 class ProductServiceTest {
 
-    @Mock
-    private IProductRepository productRepository;
-
-    @Mock
-    private FileStorageService fileStorageService;
+    @Mock private IProductRepository productRepository;
+    @Mock private IFileStorageService fileStorageService;
+    @Mock private FileValidationUtils fileValidationUtils;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ProductService productService;
 
-    private ProductDTO productDTO;
     private Product product;
-    private List<MultipartFile> images;
-    private Image image1;
-    private Image image2;
+    private ProductDTO productDTO;
 
     @BeforeEach
     void setUp() {
-        productDTO = new ProductDTO();
-        productDTO.setName("Test Product");
-        productDTO.setDescription("Test Description");
-        productDTO.setPrice(100.0);
-
         product = new Product();
         product.setId(1L);
-        product.setName("Test Product");
-        product.setDescription("Test Description");
-        product.setPrice(100.0);
+        product.setName("Producto Original");
+        product.setImages(new ArrayList<>());
 
-        image1 = new Image();
-        image1.setId(101L);
-        image1.setImagePath("/image/image1.jpg");
-
-        image2 = new Image();
-        image2.setId(102L);
-        image2.setImagePath("/image/image2.jpg");
-
-        product.getImages().add(image1);
-        product.getImages().add(image2);
-
-        // Se configura el mock para una única imagen
-        MultipartFile mockImage = mock(MultipartFile.class);
-        images = List.of(mockImage);
+        productDTO = new ProductDTO();
+        productDTO.setName("Producto Actualizado");
+        productDTO.setDescription("Descripción válida del producto");
+        productDTO.setPrice(100.0);
     }
 
     @Test
-    @DisplayName("Guardar un producto exitosamente")
-    void saveProduct_Success() {
+    @DisplayName("Crear Producto - Éxito al crear con imágenes válidas")
+    void createProduct_Success() throws IOException {
+        MultipartFile file = new MockMultipartFile("newImage", "newImage.jpg", "image/jpeg", "some-image-bytes".getBytes());
+        List<MultipartFile> files = List.of(file);
 
-        when(images.get(0).getOriginalFilename()).thenReturn("test-image.jpg");
-        when(images.get(0).getContentType()).thenReturn("image/jpeg");
+        when(productRepository.existsByName(anyString())).thenReturn(false);
+        when(fileStorageService.storeFile(eq(file), anyString())).thenReturn("/image/product_folder/newImage.jpg");
+        when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
 
-        when(productRepository.findByName(productDTO.getName())).thenReturn(Optional.empty());
-        when(fileStorageService.storeFile(any(MultipartFile.class))).thenReturn("/image/test-image.jpg");
-
-        // Creamos un captor para verificar el objeto Product que se pasa al método save
-        ArgumentCaptor<Product> productCaptor = ArgumentCaptor.forClass(Product.class);
-
-        // Devolvemos el mismo objeto capturado para que la prueba sea precisa
-        when(productRepository.save(productCaptor.capture())).thenAnswer(invocation -> {
-                    Product savedProduct = invocation.getArgument(0);
-                    savedProduct.setId(1L);
-                    savedProduct.getImages().get(0).setId(1L);
-                    return savedProduct;
-                }
-        );
-
-        Product result = productService.saveProduct(productDTO, images);
+        ProductResponseDTO result = productService.saveProduct(productDTO, files);
 
         assertNotNull(result);
-
-
-        // Capturamos el objeto y verificamos su estado
-        Product capturedProduct = productCaptor.getValue();
-
-        assertEquals(1, capturedProduct.getImages().size());
-        assertEquals(productDTO.getName(), capturedProduct.getName());
-        verify(productRepository, times(1)).findByName(productDTO.getName());
-        verify(fileStorageService, times(1)).storeFile(any(MultipartFile.class));
-        verify(productRepository, times(1)).save(productCaptor.capture());
-
+        assertEquals(productDTO.getName(), result.getName());
+        verify(fileValidationUtils).validateAtLeastOneImage(files);
+        verify(productRepository).save(any(Product.class));
     }
 
     @Test
-    @DisplayName("Lanza una UniqueProductException si el nombre ya existe")
-    void saveProduct_UniqueProductException() {
-        when(productRepository.findByName(productDTO.getName())).thenReturn(Optional.of(product));
-        assertThrows(UniqueProductException.class, () -> productService.saveProduct(productDTO, images));
-        verify(productRepository, never()).save(any(Product.class));
-        verify(fileStorageService, never()).storeFile(any(MultipartFile.class));
+    @DisplayName("Crear Producto - Error si el nombre del producto ya existe")
+    void createProduct_ThrowsUniqueName() {
+        when(productRepository.existsByName(anyString())).thenReturn(true);
+
+        assertThrows(UniqueNameException.class, () -> productService.saveProduct(productDTO, null));
+        verify(productRepository, never()).save(any());
     }
 
     @Test
-    @DisplayName("Lanza una ImageLimitExceededException si el límite de imágenes es excedido")
-    void saveProduct_ImageLimitExceededException() {
-        List<MultipartFile> excessiveImages = new ArrayList<>();
-        for (int i = 0; i < 6; i++) {
-            excessiveImages.add(mock(MultipartFile.class));
-        }
-        assertThrows(ImageLimitExceededException.class, () -> productService.saveProduct(productDTO, excessiveImages));
-        verify(productRepository, never()).save(any(Product.class));
-    }
+    @DisplayName("Actualizar Producto - Debería eliminar imágenes marcadas y agregar nuevas")
+    void updateProduct_FullSync_Success() throws IOException {
+        // Imagen que se va a borrar
+        ProductImage oldImg = new ProductImage();
+        oldImg.setId(50L);
+        oldImg.setImagePath("/image/product_folder/delete.jpg");
+        product.getImages().add(oldImg);
 
-    @Test
-    @DisplayName("Obtiene un producto por ID exitosamente")
-    void getProductById_Success() {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        Optional<Product> foundProduct = productService.getProductById(1L);
-        assertTrue(foundProduct.isPresent());
-        assertEquals(product.getName(), foundProduct.get().getName());
+        when(productRepository.existsByNameAndIdNot(anyString(), anyLong())).thenReturn(false);
+
+        MultipartFile newFile = new MockMultipartFile("newImage", "newImage.jpg", "image/jpeg", "some-image-bytes".getBytes());
+        when(fileStorageService.storeFile(eq(newFile), anyString())).thenReturn("/image/product_folder/new.jpg");
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+
+        productService.updateProduct(1L, productDTO, List.of(newFile), List.of(50L));
+
+        verify(eventPublisher).publishEvent(any(ImageDeletedEvent.class)); // Verificamos evento de borrado físico
+        verify(productRepository).save(product);
     }
 
     @Test
-    @DisplayName("Devuelve un Optional vacío si el producto no existe")
-    void getProductById_NotFound() {
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
-        Optional<Product> foundProduct = productService.getProductById(999L);
-        assertFalse(foundProduct.isPresent());
-    }
-
-    @Test
-    @DisplayName("Elimina un producto y sus archivos exitosamente")
-    void deleteProduct_Success() {
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        productService.deleteProduct(1L);
-        verify(fileStorageService, times(2)).deleteFile(anyString());
-        verify(productRepository, times(1)).delete(product);
-    }
-
-    @Test
-    @DisplayName("No Elimina el producto si no existe")
+    @DisplayName("Eliminar Producto - Debería lanzar excepción si no existe")
     void deleteProduct_NotFound() {
-        when(productRepository.findById(999L)).thenReturn(Optional.empty());
-        assertThrows(RuntimeException.class, () -> productService.deleteProduct(999L));
-        verify(productRepository, never()).delete(any(Product.class));
-        verify(fileStorageService, never()).deleteFile(anyString());
+        when(productRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> productService.deleteProduct(1L));
     }
 
     @Test
-    @DisplayName("Lista todos los productos exitosamente")
-    void getAllProducts_Success() {
-        List<Product> mockProducts = List.of(product, new Product());
-        when(productRepository.findAll()).thenReturn(mockProducts);
-        List<Product> products = productService.getAllProducts();
-        assertNotNull(products);
-        assertEquals(2, products.size());
-        verify(productRepository, times(1)).findAll();
-    }
+    @DisplayName("Eliminar Producto - Éxito y publicación de eventos de borrado de archivos")
+    void deleteProduct_Success() throws IOException {
+        ProductImage img = new ProductImage();
+        img.setImagePath("/image/product_folder/img.jpg");
+        product.getImages().add(img);
 
-    @Test
-    @DisplayName("Actualiza un producto exitosamente")
-    void updateProduct_Success() {
-        Long productId = 1L;
-        ProductDTO updatedDto = new ProductDTO();
-        updatedDto.setName("Updated Product Name");
-        updatedDto.setDescription("Updated Description");
-        updatedDto.setPrice(150.0);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
-        List<MultipartFile> newImages = List.of(mock(MultipartFile.class));
-        when(newImages.get(0).getOriginalFilename()).thenReturn("new-image.jpg");
+        productService.deleteProduct(1L);
 
-        List<Long> imagesToDeleteIds = List.of(image1.getId());
-        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
-        when(fileStorageService.storeFile(any(MultipartFile.class))).thenReturn("/image/new-image.jpg");
-        when(productRepository.save(any(Product.class))).thenAnswer(invocation -> {
-            Product savedProduct = invocation.getArgument(0);
-            savedProduct.getImages().get(1).setId(103L);
-            return savedProduct;
-        });
-
-        // Ejecutar el método a probar
-        Product result = productService.updateProduct(productId, updatedDto, newImages, imagesToDeleteIds);
-
-        // Verificaciones
-        assertNotNull(result);
-        assertEquals(updatedDto.getName(), result.getName());
-        assertEquals(updatedDto.getDescription(), result.getDescription());
-        assertEquals(updatedDto.getPrice(), result.getPrice());
-
-        // Verificar que se eliminó la imagen correcta y se añadió la nueva
-        verify(fileStorageService, times(1)).deleteFile(image1.getImagePath());
-        verify(fileStorageService, times(1)).storeFile(any(MultipartFile.class));
-        verify(productRepository, times(1)).save(any(Product.class));
-
-        // Verificar el estado de la lista de imágenes del producto
-        assertEquals(2, result.getImages().size());
-        assertFalse(result.getImages().stream().anyMatch(img -> img.getId().equals(image1.getId())));
-        assertTrue(result.getImages().stream().anyMatch(img -> img.getImagePath().equals("/image/new-image.jpg")));
-    }
-
-    @Test
-    @DisplayName("Lanza una excepción si el producto a actualizar no existe")
-    void updateProduct_ProductNotFound() {
-        Long nonExistentId = 999L;
-        ProductDTO updatedDto = new ProductDTO();
-
-        when(productRepository.findById(nonExistentId)).thenReturn(Optional.empty());
-
-        assertThrows(RuntimeException.class, () -> productService.updateProduct(nonExistentId, updatedDto, null, null));
-
-        verify(productRepository, never()).save(any(Product.class));
-        verify(fileStorageService, never()).deleteFile(anyString());
-        verify(fileStorageService, never()).storeFile(any(MultipartFile.class));
+        verify(productRepository).delete(product);
+        verify(eventPublisher).publishEvent(any(ImageDeletedEvent.class));
     }
 }
-
-

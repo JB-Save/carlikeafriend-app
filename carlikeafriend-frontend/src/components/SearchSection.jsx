@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useFetch } from '../hooks/useFetch';
 import { PaginationControlsComponent } from './PaginationControlsComponent';
 import { CardProductComponent } from './CardProductComponent'
 import { useMessageModal } from '../context/MessageModalContext';
+import { API_CONFIG } from '../config/apiConfig';
 
 export const SearchSection = ({ productsPerPage, type }) => {
 
@@ -13,13 +14,13 @@ export const SearchSection = ({ productsPerPage, type }) => {
     const [err, setErr] = useState(null);
     const totalPages = Math.ceil(allProducts.length / productsPerPage);
 
-    const url = "http://localhost:8080/carlikeafriend/products";
+    const URL = API_CONFIG.PRODUCTS;
 
     const { data, isLoading, error, fetchData } = useFetch();
 
     // Este useEffect solo debe ejecutarse una vez al montar el componente.
     useEffect(() => {
-        fetchData(url, 'GET');
+        fetchData(URL, 'GET');
     }, []);
 
     // Este useEffect procesa los datos una vez que han sido recibidos.
@@ -33,9 +34,8 @@ export const SearchSection = ({ productsPerPage, type }) => {
         }
 
         if (error) {
-            console.error("Error al cargar los productos de búsqueda:", error);
-            const errorMessage = "Error al cargar los productos de búsqueda. Por favor, inténtalo de nuevo.";
-            setErr(errorMessage);
+            console.error(error);
+            setErr(error.message || "Ocurrio un error inesperado.");
             setModalMessage("Ocurrió un problema en la aplicación.");
         }
     }, [data, error, setModalMessage]);
@@ -56,24 +56,9 @@ export const SearchSection = ({ productsPerPage, type }) => {
         setCurrentPage(newPage);
     };
 
-    if (isLoading) {
-        return (
-            <div className="text-center my-5">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Cargando productos...</span>
-                </div>
-                <p className="mt-2 text-muted">Cargando productos...</p>
-            </div>
-        );
-    };
-
     return (
-        <section className="search-text p-4 rounded-lg shadow-sm mb-5"> {/* Sección de Buscador */}
-            <h3 className="h4 fw-bold search-text mb-3 text-center">Encuentra tu Auto Ideal</h3>
-            {/*<div className="input-group mb-3">
-                <input type="text" className="form-control rounded-start-lg" placeholder="¿Qué tipo de auto buscas? (ej. SUV, económico, deportivo)" aria-label="Buscador de autos" />
-                <button className="btn search-btn rounded-end-lg" type="button" id="button-addon2">Buscar</button>
-            </div>*/}
+        <section className="container search-text p-4 rounded-3 shadow-sm mb-5"> {/* Sección de Buscador */}
+            <h3 className="fw-bold search-text mb-3 text-center">Encuentra tu Auto Ideal</h3>
             <form className="row search-form g-3">
 
                 <div className="col-12 col-lg-4">
@@ -100,7 +85,7 @@ export const SearchSection = ({ productsPerPage, type }) => {
                             <input type="date" className="form-control" id="returnDate" />
                         </div>
                         <div className="col">
-                            <input type="time" className="form-control" id="returnTime" step="900"/>
+                            <input type="time" className="form-control" id="returnTime" step="900" />
                         </div>
                     </div>
                 </div>
@@ -113,19 +98,26 @@ export const SearchSection = ({ productsPerPage, type }) => {
                 </div>
             </form>
             <hr className="my-4" />
+            <h4 className="fw-bold search-text mb-3">Productos Aleatorios para el Buscador (Máx. 10 por página)</h4>
             {err && <div className="alert alert-danger text-center">{err}</div>}
-            <h4 className="h5 fw-bold search-text mb-3">Productos Aleatorios para el Buscador (Máx. 10 por página)</h4>
             {/* Los productos para el buscador se cargarán aquí dinámicamente */}
-            <div className="product-listings-section container my-5">
-                <div className="row row-cols-1 row-cols-md-2 g-4">
-                    {currentProducts.length === 0 ? (
-                        <div className="col-12 text-center text-muted">No hay productos disponibles.</div>
-                    ) : (
-                        currentProducts.map(product => (
-                            <CardProductComponent key={product.id} product={product} />
-                        ))
-                    )}
-                </div>
+            <div className="product-listings-section my-5">
+                {isLoading ? (
+                    <div className="text-center my-5">
+                        <div className="spinner-border text-primary" role="status"></div>
+                        <p className="mt-2 text-muted">Cargando productos...</p>
+                    </div>
+                ) : (!currentProducts || currentProducts.length === 0) ? (
+                    <div className="text-center text-muted">No hay productos disponibles.</div>
+                ) : (
+                    <div className="row row-cols-1 row-cols-md-2 g-4">
+                        {
+                            currentProducts.map(product => (
+                                <CardProductComponent key={product.id} product={product} />
+                            ))
+                        }
+                    </div>
+                )}
                 {/* Controles de Paginación para búsqueda*/}
                 <PaginationControlsComponent
                     currentPage={currentPage}

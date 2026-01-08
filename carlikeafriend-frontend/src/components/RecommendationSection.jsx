@@ -3,6 +3,7 @@ import { useFetch } from "../hooks/useFetch";
 import { CardProductComponent } from "./CardProductComponent";
 import { PaginationControlsComponent } from "./PaginationControlsComponent";
 import { useMessageModal } from "../context/MessageModalContext";
+import { API_CONFIG } from "../config/apiConfig";
 
 
 export const RecommendationSection = ({ productsPerPage, type }) => {
@@ -14,13 +15,13 @@ export const RecommendationSection = ({ productsPerPage, type }) => {
     const [err, setErr] = useState(null);
     const totalPages = Math.ceil(allProducts.length / productsPerPage);
 
-    const url = 'http://localhost:8080/carlikeafriend/products/recommended-products';
+    const URL = API_CONFIG.RECOMMENDED_PRODUCTS;
 
     const { data, isLoading, error, fetchData } = useFetch();
 
     // Este useEffect solo debe ejecutarse una vez al montar el componente.
     useEffect(() => {
-        fetchData(url, 'GET')
+        fetchData(URL, 'GET')
     }, [])
 
     // Este useEffect procesa los datos una vez que han sido recibidos.
@@ -33,12 +34,11 @@ export const RecommendationSection = ({ productsPerPage, type }) => {
             setAllProducts(shuffledProducts);
         }
         if (error) {
-            console.error("Error al cargar los productos recomendados:", error);
-            const errorMessage = "Error al cargar los productos Recomendados. Por favor, inténtalo de nuevo.";
-            setErr(errorMessage);
-           setModalMessage("Ocurrió un problema en la aplicación.");
+            console.error(error);
+            setErr(error.message || "Ocurrio un error inesperado.");
+            setModalMessage("Ocurrió un problema en la aplicación.");
         }
-    }, [data, error,setModalMessage])
+    }, [data, error, setModalMessage])
 
     // Este useEffect maneja la paginación. Se ejecuta solo cuando allProducts o currentPage cambian.
     useEffect(() => {
@@ -56,33 +56,30 @@ export const RecommendationSection = ({ productsPerPage, type }) => {
         setCurrentPage(newPage);
     };
 
-    if (isLoading) {
-        return (
-            <div className="text-center my-5">
-                <div className="spinner-border text-primary" role="status">
-                    <span className="visually-hidden">Cargando productos...</span>
-                </div>
-                <p className="mt-2 text-muted">Cargando productos...</p>
-            </div>
-        );
-    }
-
     return (
 
-        <section className="mb-5"> {/* Sección de Recomendaciones de los Productos */}
-            <h3 className="h4 fw-bold recommendation-text mb-3">Nuestras Recomendaciones</h3>
-             {err && <div className="alert alert-danger text-center">{err}</div>}
+        <section className="container p-4 rounded-3 shadow-sm mb-5"> {/* Sección de Recomendaciones de los Productos */}
+            <h3 className="fw-bold recommendation-text mb-3">Nuestras Recomendaciones</h3>
+            {err && <div className="alert alert-danger text-center">{err}</div>}
             {/* Los productos recomendados se cargarán aquí dinámicamente */}
-            <div className="product-listings-section container my-5">
-                <div className="row row-cols-1 row-cols-md-2 g-4">
-                    {currentProducts.length === 0 ? (
-                        <div className="col-12 text-center text-muted">No hay productos disponibles.</div>
-                    ) : (
-                        currentProducts.map(product => (
-                            <CardProductComponent key={product.id} product={product} />
-                        ))
-                    )}
-                </div>
+            <div className="product-listings-section my-5">
+                {isLoading ? (
+                    <div className="text-center my-5">
+                        <div className="spinner-border text-primary" role="status"></div>
+                        <p className="mt-2 text-muted">Cargando productos...</p>
+                    </div>
+                ) : (!currentProducts || currentProducts.length === 0) ? (
+                    <div className="text-center text-muted">No hay productos disponibles.</div>
+                ) : (
+                    <div className="row row-cols-1 row-cols-md-2 g-4">
+                        {
+                            currentProducts.map(product => (
+                                <CardProductComponent key={product.id} product={product} />
+                            ))
+                        }
+                    </div>
+                )}
+
                 {/* Controles de Paginación para Recomendaciones */}
                 <PaginationControlsComponent
                     currentPage={currentPage}

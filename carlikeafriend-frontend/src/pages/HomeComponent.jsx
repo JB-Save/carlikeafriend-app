@@ -8,7 +8,7 @@ import "../styles/HomeStyle.css"
 
 export const HomeComponent = () => {
     return (
-        <main className="container-fluid py-4">
+        <main className="min-vh-100 container-fluid py-4">
             <WelcomeSection/>
             <SearchSection productsPerPage={10} type="search"/>
             <CategoriesSection />

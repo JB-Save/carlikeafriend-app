@@ -6,7 +6,7 @@ describe('ImageGalleryModal', () => {
     // Datos de producto de ejemplo para las pruebas.
     const mockProduct = {
         name: 'Coche Deportivo',
-        images: [
+        productImages: [
             { id: 101, imagePath: '/path/to/image1.jpg' },
             { id: 102, imagePath: '/path/to/image2.jpg' }
         ],
@@ -29,10 +29,10 @@ describe('ImageGalleryModal', () => {
         // Verificar que el componente hijo CompleteGallaryModal se renderice.
         // Contamos el número de imágenes renderizadas usando el data-testid.
         const images = screen.getAllByTestId('gallery-image');
-        expect(images.length).toBe(mockProduct.images.length);
+        expect(images.length).toBe(mockProduct.productImages.length);
 
         // Verificar que la URL de la primera imagen sea correcta.
-        expect(images[0]).toHaveAttribute('src', `http://localhost:8080/carlikeafriend/products/images${mockProduct.images[0].imagePath}`);
+        expect(images[0]).toHaveAttribute('src', `http://localhost:8080/carlikeafriend/products/images${mockProduct.productImages[0].imagePath}`);
     });
 
     it('debe llamar a la función onClose cuando se hace clic en el botón de cerrar', () => {

@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Secretos y Configuración Local
+.env
+
+# Datos generados (Imágenes subidas)
+uploads/
+logs/

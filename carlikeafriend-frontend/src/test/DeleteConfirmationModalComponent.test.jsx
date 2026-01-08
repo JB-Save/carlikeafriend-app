@@ -5,6 +5,8 @@ import { DeleteConfirmationModalComponent } from '../components/DeleteConfirmati
 describe('DeleteConfirmationModalComponent', () => {
   // Mock del ID y las funciones de callback.
   const mockId = '123';
+  const mockObjectName = 'este producto'
+  const mockIsDeleting = null;
   const mockDeleteFunction = vi.fn();
   const mockOnClose = vi.fn();
   const mockOnClose2 = vi.fn();
@@ -17,11 +19,13 @@ describe('DeleteConfirmationModalComponent', () => {
         id={mockId}
         deleteFunction={mockDeleteFunction}
         onClose={mockOnClose}
+        objectName={mockObjectName}
+        isDeleting={mockIsDeleting}
       />
     );
 
     // Asegura que el texto del modal esté en el documento.
-    expect(screen.getByText('¿Estás seguro de que quieres eliminar este producto?')).toBeInTheDocument();
+    expect(screen.getByText('¿Estás seguro de que quieres eliminar este producto con ID: 123?')).toBeInTheDocument();
     // Asegura que los botones 'Eliminar' y 'Cancelar' estén en el documento.
     expect(screen.getByRole('button', { name: 'Eliminar' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeInTheDocument();
@@ -34,6 +38,8 @@ describe('DeleteConfirmationModalComponent', () => {
         id={null}
         deleteFunction={mockDeleteFunction}
         onClose={mockOnClose}
+        objectName={mockObjectName}
+        isDeleting={mockIsDeleting}
       />
     );
 
@@ -42,25 +48,26 @@ describe('DeleteConfirmationModalComponent', () => {
   });
 
   // Caso de prueba para verificar que el botón 'Eliminar' llama a las funciones correctas.
-  it('debe llamar a deleteFunction y onClose cuando se hace clic en "Eliminar"', () => {
+  it('debe llamar a deleteFunction cuando se hace clic en "Eliminar"', () => {
     render(
       <DeleteConfirmationModalComponent
         id={mockId}
         deleteFunction={mockDeleteFunction}
         onClose={mockOnClose}
+        objectName={mockObjectName}
+        isDeleting={mockIsDeleting}
       />
     );
 
     // Simula un clic en el botón 'Eliminar'.
     fireEvent.click(screen.getByRole('button', { name: 'Eliminar' }));
-
-    // Asegura que las funciones mockeadas se hayan llamado correctamente.
+  
+    // Asegura que las funciones mockeadas se hayan llamado correctamente.    
     expect(mockDeleteFunction).toHaveBeenCalledTimes(1);
     expect(mockDeleteFunction).toHaveBeenCalledWith(mockId);
-    expect(mockOnClose).toHaveBeenCalledTimes(1);
   });
 
-  
+
   // Caso de prueba para verificar que el botón 'Cancelar' solo llama a onClose.
   it('solo debe llamar a onClose cuando se hace clic en "Cancelar"', () => {
     render(
@@ -68,9 +75,11 @@ describe('DeleteConfirmationModalComponent', () => {
         id={mockId}
         deleteFunction={mockDeleteFunction2}
         onClose={mockOnClose2}
+        objectName={mockObjectName}
+        isDeleting={mockIsDeleting}
       />
     );
-    
+
     // Simula un clic en el botón 'Cancelar'.
     fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
@@ -78,5 +87,5 @@ describe('DeleteConfirmationModalComponent', () => {
     expect(mockOnClose2).toHaveBeenCalledTimes(1);
     expect(mockDeleteFunction2).not.toHaveBeenCalled();
   });
-  
+
 });

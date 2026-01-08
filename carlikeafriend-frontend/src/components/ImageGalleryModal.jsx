@@ -8,7 +8,7 @@ export const ImageGalleryModal = ({product, onClose}) => {
   }
 
    return (
-        <div className="modal fade show" style={{display: 'block'}} tabIndex="-1" role="dialog" aria-labelledby="imageGalleryModalLabel" aria-hidden="true">
+        <div className="modal fade show" style={{display: 'block'}} tabIndex="-1" role="dialog" aria-labelledby="imageGalleryModalLabel" aria-modal="true">
             <div className="modal-dialog modal-xl modal-dialog-centered" role="document">
                 <div className="modal-content">
                     <div className="modal-header">
@@ -19,7 +19,7 @@ export const ImageGalleryModal = ({product, onClose}) => {
                     </div>
                     <div className="modal-body">
                         {/* Se pasa la lista de imágenes al componente hijo */}
-                        <CompleteGalleryModal images={product.images} productName={product.name} />
+                        <CompleteGalleryModal images={product.productImages} productName={product.name} />
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn back-btn" onClick={onClose}>Cerrar</button>

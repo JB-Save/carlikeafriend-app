@@ -1,75 +1,132 @@
-import { useEffect, useState } from 'react'
-import { useFetch } from '../hooks/useFetch';
+import { useContext, useEffect, useState } from 'react'
 import { ProductTableComponent } from './ProductTableComponent';
-import { useMessageModal } from '../context/MessageModalContext';
 import { DeleteConfirmationModalComponent } from './DeleteConfirmationModalComponent';
+import { Link, useNavigate } from 'react-router-dom';
+import { UserContext } from '../context/UserContext';
+import { extractErrorMessage } from '../utils/extractErrorMessage';
+import { handleUnauthorizedError } from '../utils/handleUnauthorizedError';
+import { useMessageModal } from '../context/MessageModalContext';
+import { API_CONFIG } from '../config/apiConfig';
 
 export const ProductListComponent = () => {
 
-    const { setModalMessage } = useMessageModal(); // Hook para el mensaje
+    const { token, logout } = useContext(UserContext);
+    const { setModalMessage } = useMessageModal();
     const [allProducts, setAllProducts] = useState([]);
+
+    const [isLoading, setIsLoading] = useState(true);
     const [err, setErr] = useState(null);
+
+    const [isDeleting, setIsDeleting] = useState(false);
+
     const [errDelete, setErrDelete] = useState(null);
-    const { data, isLoading, error, fetchData } = useFetch();
-    const { data: deleteData, isLoading: isDelete, error: deleteDataError, fetchData: fetchDeleteData } = useFetch();
     const [productIdToDelete, setProductIdToDelete] = useState(null)
-    const url = "http://localhost:8080/carlikeafriend/products";
+    const URL = API_CONFIG.PRODUCTS;
 
+    const navigate = useNavigate(); // <-- Usa useNavigate para la navegación
 
-    useEffect(() => {
-        fetchData(url, 'GET');
-    }, [])
+    //Función para cargar los productos
+    const fetchProducts = async () => {
+        setIsLoading(true);
+        setErr(null);
 
-    useEffect(() => {
-        if (data) {
-            setAllProducts(data);
+        try {
+
+            const response = await fetch(URL, {
+                method: 'GET',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            // Si es 401, redirige y corta la ejecución aquí
+            if (handleUnauthorizedError(response, navigate, logout, setModalMessage)) return;
+
+            if (response.ok) {
+                const data = await response.json();
+                setAllProducts(data);
+            } else {
+                // Manejo de otros errores (400, 500, etc.)
+                const msg = await extractErrorMessage(response);
+                throw new Error(msg);
+            }
+        } catch (error) {
+            console.error("Error al obtener productos: ", error);
+            setErr(error.message || "Ocurrió un error inesperado.");
+        } finally {
+            setIsLoading(false);
         }
-
-        if (error) {
-            console.error("Error al cargar la lista de productos.", error);
-            const errorMessage = "Error al cargar la lista de productos. Por favor, inténtalo de nuevo.";
-            setErr(errorMessage);
-            setModalMessage("Ocurrió un problema en la aplicación.");
-        }
-    }, [data, error, setModalMessage])
+    };
 
     useEffect(() => {
-        if (deleteData?.status === 204) {
-            const successMessage = "Producto eliminado exitosamente.";
-            setErrDelete(successMessage);
-            fetchData(url, 'GET');            
-        };
+        if (token) fetchProducts();
+    }, [token, navigate, logout]);
 
-        if (deleteDataError) {
-            console.error("Error al eliminar producto:", deleteDataError);
-            const errorMessage = "Error al eliminar el producto.";
-            setErrDelete(errorMessage);
-            setModalMessage("Ocurrió un problema en la aplicación.");
-        };
-        const timer = setTimeout(() => {
-            setErrDelete(null); // Oculta la alerta
-        }, 3000); // 3 segundos
-        return () => clearTimeout(timer); // Limpia el temporizador si el componente se desmonta
-    }, [deleteData, deleteDataError, setModalMessage]);
+    useEffect(() => {
+        if (errDelete) {
+            const timer = setTimeout(() => {
+                setErrDelete(null);
+            }, 3000);
+            // Limpieza: si el usuario vuelve a borrar algo o cierra el componente, 
+            // cancelamos el timer anterior para evitar conflictos.
+            return () => clearTimeout(timer);
+        }
+    }, [errDelete]);
 
-
+    // Lógica de eliminación
     const deleteFunction = async (productIdToDelete) => {
-        await fetchDeleteData(`${url}/${productIdToDelete}`, 'DELETE');
+        setErrDelete(null);
+        setIsDeleting(true);
+
+        try {
+            const response = await fetch(`${URL}/${productIdToDelete}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            // Manejo de seguridad (401)
+            if (handleUnauthorizedError(response, navigate, logout, setModalMessage)) return;
+
+            // Si la respuesta es exitosa (204 No Content para DELETE)
+            if (response.ok) {
+                setErrDelete("Producto eliminado exitosamente.");
+                fetchProducts();
+            } else {
+                // Si llegamos aquí, el servidor respondió con error (400, 403, 404, 500)
+                // Lanzamos un error con el mensaje extraído
+                const msg = await extractErrorMessage(response);
+                throw new Error(msg);
+            }
+
+        } catch (error) {
+            console.error("Error al eliminar producto: ", error);
+            setErrDelete(error.message || "Ocurrió un error inesperado.");
+        } finally {
+            setIsDeleting(false);
+            setProductIdToDelete(null);
+        }
     };
 
     return (
         <div id="product-list-content" className="container-fluid py-2"> {/*Contenido principal de la lista de productos  */}
-            <h2 className="h3 fw-bold text-product-list text-center mt-2">Lista de Productos Disponibles</h2>
+            <Link to="/administration/add-product" className="text-decoration-none d-block py-2 px-2 rounded btn-add text-center">
+                <i className="bi bi-plus-circle-fill me-2"></i> Agregar Producto
+            </Link>
+            <h2 className="h3 fw-bold text-list text-center mt-2">Lista de Productos Disponibles</h2>
             {err && <div className="alert alert-danger text-center">{err}</div>}
-            {errDelete && <div className={`alert ${deleteDataError ? 'alert-danger' : 'alert-success'}  text-center fade ${errDelete ? 'show' : ''}`} style={{ transition: 'opacity 0.5s ease-in-out' }}>{errDelete}</div>}
-            <div className="card card-shadow rounded-lg p-4">
-                {isLoading && <div className="text-center my-5"><div className="spinner-border text-primary" role="status"></div><p>Cargando productos...</p></div>}
-                {!isLoading && allProducts && allProducts.length > 0 &&
-                    <ProductTableComponent products={allProducts} setProductIdToDelete={setProductIdToDelete} />
-                }
-                {!isLoading && (!allProducts || allProducts.length === 0) &&
+            {errDelete && <div className={`alert ${errDelete.includes("exitosamente") ? 'alert-success' : 'alert-danger'}  text-center fade show`} style={{ transition: 'opacity 0.5s ease-in-out' }}>{errDelete}</div>}
+            <div className="card card-shadow rounded-3 p-4">
+
+                {isLoading ? (
+                    <div className="text-center my-5">
+                        <div className="spinner-border text-primary" role="status"></div>
+                        <p className="mt-2 text-muted">Cargando productos...</p>
+                    </div>
+                ) : (!allProducts || allProducts.length === 0) ? (
                     <div className="text-center text-muted mb-3">No hay productos disponibles.</div>
+                ) : (
+                    <ProductTableComponent products={allProducts} setProductIdToDelete={setProductIdToDelete} />
+                )
                 }
+
             </div>
             {/* El modal de confirmación se renderiza condicionalmente aquí */}
             {productIdToDelete && (
@@ -77,6 +134,8 @@ export const ProductListComponent = () => {
                     id={productIdToDelete}
                     deleteFunction={deleteFunction}
                     onClose={() => setProductIdToDelete(null)}
+                    objectName="este producto"
+                    isDeleting={isDeleting}
                 />
             )}
         </div>

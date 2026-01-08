@@ -1,42 +1,45 @@
 /* Estilo para el modal de mensaje personalizado */
-        .message-modal {
-            display: none; /* Oculto por defecto */
-            position: fixed; /* Fijo en la pantalla */
-            z-index: 1050; /* Por encima de otros modales si los hubiera */
-            left: 0;
-            top: 0;
-            width: 100%; /* Ancho completo */
-            height: 100%; /* Alto completo */
-            overflow: auto; /* Habilitar scroll si es necesario */
-            background-color: rgba(46, 46, 132, 0.075); /* Fondo semi-transparente */
-            justify-content: center;
-            align-items: center;
-        }
-        .message-modal-content {
-            background-color: #f4f3f2;
-            color: #2e2e84;
-            margin: auto;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
-            width: 80%; /* Ancho responsivo */
-            max-width: 400px;
-            text-align: center;
-            position: relative; /* Necesario para el botón de cerrar */
-        }
-        .message-modal-close {
-            color: #6a5e9b;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            cursor: pointer;
-        }
-        .message-modal-close:hover,
-        .message-modal-close:focus {
-            color: #2e2e84;
-            text-decoration: none;
-            cursor: pointer;
-        }
+.message-modal {
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(46, 46, 132, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+}
+
+.message-modal-content {
+    background-color: #f4f3f2;
+    color: #2e2e84;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(46, 46, 132, 0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    border: none;
+}
+
+.message-modal-close {
+    color: #6a5e9b;
+    font-size: 32px;
+    font-weight: 300;
+    position: absolute;
+    top: 5px;
+    right: 15px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.message-modal-close:hover {
+    color: #2e2e84;
+    transform: scale(1.1);
+}

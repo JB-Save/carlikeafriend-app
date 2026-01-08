@@ -1,95 +1,124 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, vi } from 'vitest';
+import { beforeEach, describe, expect, vi, it } from 'vitest';
 import { ProductListComponent } from '../components/ProductListComponent';
-import { useFetch } from '../hooks/useFetch';
-import { useMessageModal } from '../context/MessageModalContext';
+import { UserContext } from '../context/UserContext';
+import { MessageModalContext } from '../context/MessageModalContext';
+import { BrowserRouter } from 'react-router-dom';
 
-// Mocks de los componentes y hooks para aislar ProductListComponent
+// 1. Mocks de sub-componentes alineados con el código real
 vi.mock('../components/ProductTableComponent', () => ({
-    ProductTableComponent: vi.fn(({ products, handleDeleteClick }) => (
+    ProductTableComponent: vi.fn(({ products, setProductIdToDelete }) => (
         <div data-testid="product-table">
-            {/* Simula una fila de la tabla con un botón de eliminar */}
             {products.map((product) => (
-                <button key={product.id} onClick={() => handleDeleteClick(product.id)}>
-                    Eliminar {product.id}
+                <button key={product.id} onClick={() => setProductIdToDelete(product.id)}>
+                    Eliminar {product.name}
                 </button>
             ))}
         </div>
     )),
 }));
 
-
+// Mock del modal usando las props reales del archivo que enviaste
 vi.mock('../components/DeleteConfirmationModalComponent', () => ({
-    DeleteConfirmationModalComponent: vi.fn(({ isModalOpen, onConfirm, onCancel }) =>
-        isModalOpen ? (
-            <div data-testid="delete-modal">
-                <button onClick={onConfirm}>Confirmar Eliminación</button>
-                <button onClick={onCancel}>Cancelar</button>
-            </div>
-        ) : null
-    ),
+    DeleteConfirmationModalComponent: vi.fn(({ id, deleteFunction, onClose, objectName, isDeleting }) => (
+        <div data-testid="delete-modal">
+            <p>¿Estás seguro de que quieres eliminar {objectName} con ID: {id}?</p>
+            <button onClick={() => deleteFunction(id)} disabled={isDeleting}>
+                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+            </button>
+            <button onClick={onClose}>Cancelar</button>
+        </div>
+    )),
 }));
 
-// Mock del hook useFetch para controlar los datos de la API
-vi.mock('../hooks/useFetch', () => ({
-    useFetch: vi.fn(() => ({
-        data: null,
-        isLoading: false,
-        error: null,
-        fetchData: vi.fn(),
-    })),
+// Mocks de utilerías
+vi.mock('../utils/extractErrorMessage', () => ({
+    extractErrorMessage: vi.fn(() => Promise.resolve("Error del servidor")),
 }));
 
-// Mock del hook useMessageModal para el contexto del modal
-vi.mock('../context/MessageModalContext', () => ({
-    useMessageModal: vi.fn(() => ({
-        setModalMessage: vi.fn(),
-    })),
+vi.mock('../utils/handleUnauthorizedError', () => ({
+    handleUnauthorizedError: vi.fn(() => false),
 }));
 
 describe('ProductListComponent', () => {
-    // Datos de prueba
-    const mockProducts = [
-        { id: '1', name: 'Carro A', },
-        { id: '2', name: 'Carro B', },
-    ];
+    const mockToken = 'fake-token';
+    const mockLogout = vi.fn();
+    const mockSetModalMessage = vi.fn();
+    const mockProducts = [{ id: '101', name: 'Producto Prueba' }];
 
-    // Limpia los mocks antes de cada prueba para evitar interferencias
     beforeEach(() => {
         vi.clearAllMocks();
+        global.fetch = vi.fn();
     });
 
-    //Muestra el spinner de carga al cargar los datos
-    it('debe mostrar el spinner de carga mientras se cargan los productos', () => {
-        useFetch
-            .mockReturnValueOnce({ data: null, isLoading: true, error: null, fetchData: vi.fn() })
-            .mockReturnValue({ data: null, isLoading: false, error: null, fetchData: vi.fn() });
+    const renderComponent = () => {
+        return render(
+            <BrowserRouter>
+                <UserContext.Provider value={{ token: mockToken, logout: mockLogout }}>
+                    <MessageModalContext.Provider value={{ setModalMessage: mockSetModalMessage }}>
+                        <ProductListComponent />
+                    </MessageModalContext.Provider>
+                </UserContext.Provider>
+            </BrowserRouter>
+        );
+    };
 
-        render(<ProductListComponent />);
-        expect(screen.getByText('Cargando productos...')).toBeInTheDocument();
-    });
-
-    // Muestra el mensaje de error si la carga falla
-    it('debe mostrar un mensaje de error si falla la carga de productos', async () => {
-        useFetch
-            .mockReturnValueOnce({ data: null, isLoading: false, error: 'Error al cargar la lista de productos. Por favor, inténtalo de nuevo.', fetchData: vi.fn() })
-            .mockReturnValue({ data: null, isLoading: false, error: null, fetchData: vi.fn() });
-
-        render(<ProductListComponent />);
-        await waitFor(() => {
-            expect(screen.getByText('Error al cargar la lista de productos. Por favor, inténtalo de nuevo.')).toBeInTheDocument();
+    it('debe mostrar el estado de carga y luego la tabla', async () => {
+        global.fetch.mockResolvedValueOnce({
+            ok: true,
+            json: async () => mockProducts,
         });
-    });
 
-    // Renderiza la tabla de productos con datos
-    it('debe renderizar la tabla de productos cuando se cargan los datos correctamente', async () => {
-        useFetch
-            .mockReturnValueOnce({ data: mockProducts, isLoading: false, error: null, fetchData: vi.fn() })
-            .mockReturnValue({ data: null, isLoading: false, error: null, fetchData: vi.fn() });
+        renderComponent();
+        
+        expect(screen.getByText(/Cargando productos.../i)).toBeInTheDocument();
 
-        render(<ProductListComponent />);
         await waitFor(() => {
             expect(screen.getByTestId('product-table')).toBeInTheDocument();
         });
     });
-})
+
+    it('debe manejar el flujo completo de eliminación', async () => {
+        // 1. Mock de carga inicial y luego de eliminación exitosa
+        global.fetch
+            .mockResolvedValueOnce({ ok: true, json: async () => mockProducts }) // Carga
+            .mockResolvedValueOnce({ ok: true }); // Delete (204/200)
+
+        renderComponent();
+
+        // 2. Abrir el modal
+        const deleteTrigger = await screen.findByText('Eliminar Producto Prueba');
+        fireEvent.click(deleteTrigger);
+
+        // 3. Verificar que el modal recibió las props correctas (objectName e id)
+        expect(screen.getByText(/eliminar este producto con ID: 101/i)).toBeInTheDocument();
+
+        // 4. Confirmar eliminación
+        const confirmBtn = screen.getByRole('button', { name: 'Eliminar' });
+        fireEvent.click(confirmBtn);
+
+        // 5. Verificar mensaje de éxito
+        await waitFor(() => {
+            expect(screen.getByText(/Producto eliminado exitosamente/i)).toBeInTheDocument();
+        });
+    });
+
+    it('debe mostrar error si la eliminación falla', async () => {
+        global.fetch
+            .mockResolvedValueOnce({ ok: true, json: async () => mockProducts })
+            .mockResolvedValueOnce({ ok: false, status: 400 }); // Fallo en delete
+
+        renderComponent();
+
+        const deleteTrigger = await screen.findByText('Eliminar Producto Prueba');
+        fireEvent.click(deleteTrigger);
+
+        const confirmBtn = screen.getByRole('button', { name: 'Eliminar' });
+        fireEvent.click(confirmBtn);
+
+        await waitFor(() => {
+            expect(screen.getByText('Error del servidor')).toBeInTheDocument();
+            expect(screen.getByText('Error del servidor')).toHaveClass('alert-danger');
+        });
+    });
+});

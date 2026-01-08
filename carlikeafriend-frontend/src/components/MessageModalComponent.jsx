@@ -8,14 +8,32 @@ export const MessageModalComponent = ({ message, onClose }) => {
   }
 
   return (
-    <div className="message-modal" style={{ display: 'flex' }}> {/* Siempre flex al renderizar */}
+    <div className="message-modal" style={{ display: 'flex' }}>
       <div className="message-modal-content">
-        <span className="message-modal-close" onClick={onClose}>
+
+        <span
+          className="message-modal-close"
+          onClick={onClose}
+          role="button"
+          aria-label="Close"
+        >
           &times;
         </span>
-        <p>{message}</p>
+
+
+        <div className="py-3">
+          <p className="fs-5 mb-0">{message}</p>
+        </div>
+
+
+        <button
+          className="btn mt-3 shadow-sm"
+          style={{ backgroundColor: '#2e2e84', color: '#f4f3f2' }}
+          onClick={onClose}
+        >
+          Entendido
+        </button>
       </div>
     </div>
   )
-
 }

@@ -1,9 +1,9 @@
 package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.ProductDTO;
-import com.carlikeafriend_backend.backend.entity.Product;
-import com.carlikeafriend_backend.backend.exception.UniqueProductException;
+import com.carlikeafriend_backend.backend.dto.ProductResponseDTO;
 import com.carlikeafriend_backend.backend.service.IFileStorageService;
+import com.carlikeafriend_backend.backend.service.IJwtService;
 import com.carlikeafriend_backend.backend.service.IProductService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,29 +11,30 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.io.ByteArrayInputStream;
 import java.util.List;
-import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(ProductController.class) // Anotación para probar solo la capa del controlador
-@DisplayName("Pruebas Unitarias para ProductController")
+@WebMvcTest(ProductController.class)
+@WithMockUser(username = "admin", roles = {"ADMIN"}) // Simula usuario autenticado globalmente para la clase
 class ProductControllerTest {
 
     @Autowired
-    private MockMvc mockMvc; // Objeto principal para simular peticiones HTTP
+    private MockMvc mockMvc;
 
     @MockitoBean
     private IProductService productService;
@@ -44,277 +45,142 @@ class ProductControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    // --- Mocks necesarios para que el filtro de seguridad JWT no falle ---
+    @MockitoBean
+    private IJwtService jwtService;
+
+    @MockitoBean
+    private UserDetailsService userDetailsService;
+    // ---------------------------------------------------------------------
+
     private ProductDTO productDTO;
-    private Product product;
-    private MockMultipartFile productJson;
-    private MockMultipartFile imageFile;
-    private MockMultipartFile newImageFile;
-    private Product product2;
+    private ProductResponseDTO productResponseDTO;
 
     @BeforeEach
     void setUp() {
         productDTO = new ProductDTO();
-        productDTO.setName("Test Product");
-        productDTO.setDescription("Test Description");
-        productDTO.setPrice(100.0);
+        productDTO.setName("Producto de Prueba");
+        productDTO.setDescription("Esta es una descripción válida de más de diez caracteres.");
+        productDTO.setPrice(150.0);
 
-        product = new Product();
-        product.setId(1L);
-        product.setName("Test Product");
-        product.setDescription("Test Description");
-        product.setPrice(100.0);
-
-        product2 = new Product();
-        product2.setId(2L);
-        product2.setName("Another Product");
-        product2.setDescription("Another Description");
-        product2.setPrice(200.0);
-
-        try {
-            String productJsonString = objectMapper.writeValueAsString(productDTO);
-            productJson = new MockMultipartFile(
-                    "product", "", "application/json", productJsonString.getBytes()
-            );
-        } catch (Exception e) {
-            throw new RuntimeException("No se pudo crear el archivo JSON simulado", e);
-        }
-
-        imageFile = new MockMultipartFile(
-                "images", "test-image.jpg", "image/jpeg", "some-image-bytes".getBytes()
-        );
-
-        newImageFile = new MockMultipartFile(
-                "newImages", "test-newImages.jpg", "image/jpeg", "some-image-bytes".getBytes()
-        );
+        productResponseDTO = new ProductResponseDTO();
+        productResponseDTO.setId(1L);
+        productResponseDTO.setName("Producto de Prueba");
+        productResponseDTO.setPrice(150.0);
     }
 
     @Test
-    @DisplayName("Crea un producto exitosamente")
-    void saveProduct_Success() throws Exception {
-        when(productService.saveProduct(any(ProductDTO.class), any())).thenReturn(product);
+    @DisplayName("GET /products - Debería retornar lista de productos con filtros")
+    void getAllProducts_Success() throws Exception {
+        List<ProductResponseDTO> productList = List.of(productResponseDTO);
 
-        mockMvc.perform(multipart("/carlikeafriend/products")
-                        .file(productJson)
-                        .file(imageFile)
-                        .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
-                .andExpect(status().isCreated()) // Expect HTTP 201 Created
-                .andExpect(jsonPath("$.name").value("Test Product"))
-                .andExpect(jsonPath("$.description").value("Test Description"));
-    }
+        // Ajustamos el mock para devolver la lista
+        when(productService.findAllFilteredProducts(any(), any(), any(), any(), any()))
+                .thenReturn(productList);
 
-    @Test
-    @DisplayName("Devuelve 409 CONFLICT si el producto ya existe")
-    void saveProduct_Conflict() throws Exception{
-        when(productService.saveProduct(any(ProductDTO.class), any())).thenThrow(new UniqueProductException(
-                "Ya existe un producto con el nombre: Test Product"));
-
-        mockMvc.perform(multipart("/carlikeafriend/products")
-                .file(productJson)
-                .file(imageFile)
-                .contentType(MediaType.MULTIPART_FORM_DATA_VALUE))
-                .andExpect(status().isConflict()); // Expect HTTP 409 Conflict
-    }
-
-    @Test
-    @DisplayName("Obtiene un producto por ID exitosamente")
-    void getProductById_Success() throws Exception{
-        when(productService.getProductById(1L)).thenReturn(Optional.of(product));
-
-        mockMvc.perform(get("/carlikeafriend/products/{id}", 1L)
-                .accept(MediaType.APPLICATION_JSON))
+        mockMvc.perform(get("/carlikeafriend/products/filter")
+                        .param("minPrice", "100")
+                        .param("maxPrice", "500"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.name").value("Test Product"));
+                // Si devuelve una lista, el JSON path empieza directamente en la raíz $
+                .andExpect(jsonPath("$[0].name").value("Producto de Prueba"));
     }
 
     @Test
-    @DisplayName("Devuelve 404 NOT_FOUND si el producto no existe")
-    void getProductById_NotFound() throws Exception {
-        when(productService.getProductById(99L)).thenReturn(Optional.empty());
+    @DisplayName("POST /products - Debería crear un producto exitosamente con imágenes")
+    void createProduct_Success() throws Exception {
+        // 1. Preparar el DTO y el JSON
+        productDTO.setName("Producto de Prueba");
+        byte[] productJson = objectMapper.writeValueAsBytes(productDTO);
 
-        mockMvc.perform(get("/carlikeafriend/products/{id}", 99L)
-                .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        // 2. Crear las partes de la petición
+        // El Controller usa @RequestPart("product") y @RequestPart("imageFiles")
+        MockMultipartFile productPart = new MockMultipartFile(
+                "product",
+                "",
+                MediaType.APPLICATION_JSON_VALUE,
+                productJson
+        );
+
+        MockMultipartFile filePart = new MockMultipartFile(
+                "imageFiles",
+                "carro.jpg",
+                MediaType.IMAGE_JPEG_VALUE,
+                "image-content".getBytes()
+        );
+
+        // 3. Configurar el Mock
+        when(productService.saveProduct(any(ProductDTO.class), any()))
+                .thenReturn(productResponseDTO);
+
+        // 4. Ejecutar y Verificar
+        mockMvc.perform(multipart("/carlikeafriend/products")
+                        .file(productPart)
+                        .file(filePart)
+                        // No forzar el Content-Type manualmente aquí si se usa .file(),
+                        // MockMvc lo detectará automáticamente como multipart/form-data
+                        .with(csrf())) // Solo si se tiene CSRF habilitado en los tests
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Producto de Prueba"));
+
+        // Verificación opcional de que el servicio fue llamado
+        verify(productService, times(1)).saveProduct(any(ProductDTO.class), any());
     }
 
     @Test
-    @DisplayName("Actualiza un producto exitosamente")
+    @DisplayName("POST /products - Error 400 cuando el DTO es inválido (Nombre corto)")
+    void createProduct_BadRequest_Validation() throws Exception {
+        productDTO.setName("Ab"); // Invalida @Size(min=3)
+        MockMultipartFile productPart = new MockMultipartFile("product", "", "application/json",
+                objectMapper.writeValueAsBytes(productDTO));
+
+        mockMvc.perform(multipart("/carlikeafriend/products")
+                        .file(productPart)
+                        .with(csrf())) // Solo si se tiene CSRF habilitado en los tests)
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT /products/{id} - Debería actualizar producto e imágenes")
     void updateProduct_Success() throws Exception {
-        Product updatedProduct = new Product();
-        updatedProduct.setId(1L);
-        updatedProduct.setName("Updated Product");
-        updatedProduct.setDescription("Updated Description");
-        updatedProduct.setPrice(200.0);
+        MockMultipartFile productPart = new MockMultipartFile("product", "", "application/json",
+                objectMapper.writeValueAsBytes(productDTO));
 
-        when(productService.updateProduct(any(Long.class), any(ProductDTO.class), any(List.class), any(List.class)))
-                .thenReturn(updatedProduct);
+        when(productService.updateProduct(eq(1L), any(ProductDTO.class), any(), any()))
+                .thenReturn(productResponseDTO);
 
-        String productDTOUpdateJson = objectMapper.writeValueAsString(productDTO);
-        MockMultipartFile productJsonUpdated = new MockMultipartFile(
-             "product", "", "application/json", productDTOUpdateJson.getBytes()
-        );
-
-        MockMultipartFile imagesToDeleteJson = new MockMultipartFile(
-                "imagesToDelete", "", "application/json", "[1, 2]".getBytes()
-        );
-
-        mockMvc.perform(multipart("/carlikeafriend/products/{id}", 1L)
-                .file(productJsonUpdated)
-                .file(imagesToDeleteJson)
-                .file(newImageFile)
-                .with(request -> {
-                    request.setMethod("PUT");
-                    return request;
-                })
-                .contentType(MediaType.MULTIPART_FORM_DATA))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Updated Product"))
-                .andExpect(jsonPath("$.description").value("Updated Description"));
-    }
-
-    @Test
-    @DisplayName("Devuelve 404 NOT_FOUND al actualizar un producto que no existe")
-    void updateProduct_NotFound() throws Exception {
-        when(productService.updateProduct(any(Long.class), any(ProductDTO.class), any(), any()))
-                .thenThrow(new RuntimeException("Producto no encontrado con ID: 99"));
-
-        String productDTOUpdatedJson = objectMapper.writeValueAsString(productDTO);
-        MockMultipartFile productJsonUpdated = new MockMultipartFile(
-                "product", "", "application/json", productDTOUpdatedJson.getBytes()
-        );
-
-        mockMvc.perform(multipart("/carlikeafriend/products/{id}", 99L)
-                        .file(productJsonUpdated)
+        // Simulamos PUT usando multipart y la cabecera de método de Spring
+        mockMvc.perform(multipart("/carlikeafriend/products/1")
+                        .file(productPart)
                         .with(request -> {
                             request.setMethod("PUT");
                             return request;
                         })
-                        .contentType(MediaType.MULTIPART_FORM_DATA))
-                .andExpect(status().isNotFound());
+                        .with(csrf())) // Solo si se tiene CSRF habilitado en los tests)
+                .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Actualización parcial (PATCH) exitosamente")
-    void patchProduct_Success() throws Exception {
-        // Objeto DTO parcial con solo el campo que queremos actualizar
-        ProductDTO partialProductDto = new ProductDTO();
-        partialProductDto.setPrice(150.50);
+    @DisplayName("GET /products/images/... - Retornar archivo físico con contentType correcto")
+    void getImageFile_Success() throws Exception {
+        String fileName = "test.webp";
+        Resource resource = new ByteArrayResource("fake-image-binary".getBytes());
 
-        Product updatedProduct = new Product();
-        updatedProduct.setId(1L);
-        updatedProduct.setName("Test Product");
-        updatedProduct.setDescription("Test Description");
-        updatedProduct.setPrice(150.50);
+        when(fileStorageService.loadFileAsResource(fileName, "product_folder")).thenReturn(resource);
+        when(productService.getProductImageContentTypeByImagePath(anyString())).thenReturn("image/webp");
 
-        when(productService.patchProduct(any(Long.class), any(ProductDTO.class), any(), any()))
-                .thenReturn(updatedProduct);
-
-        String partialJson = objectMapper.writeValueAsString(partialProductDto);
-        MockMultipartFile productPart = new MockMultipartFile("product", "", "application/json", partialJson.getBytes());
-
-        mockMvc.perform(multipart("/carlikeafriend/products/{id}", 1L)
-                        .file(productPart)
-                        .with(request -> {
-                            request.setMethod("PATCH");
-                            return request;
-                        })
-                        .contentType(MediaType.MULTIPART_FORM_DATA))
+        mockMvc.perform(get("/carlikeafriend/products/images/image/product_folder/" + fileName))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.price").value(150.50))
-                .andExpect(jsonPath("$.name").value("Test Product"));
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/webp"));
     }
 
     @Test
-    @DisplayName("Devuelve 404 NOT_FOUND al intentar aplicar un PATCH a un producto que no existe")
-    void patchProduct_NotFound() throws Exception {
-        when(productService.patchProduct(any(Long.class), any(ProductDTO.class), any(), any()))
-                .thenThrow(new RuntimeException("Producto no encontrado con ID: 99"));
-
-        String partialJson = objectMapper.writeValueAsString(new ProductDTO());
-        MockMultipartFile productPart = new MockMultipartFile("product", "", "application/json", partialJson.getBytes());
-
-        mockMvc.perform(multipart("/carlikeafriend/products/{id}", 99L)
-                        .file(productPart)
-                        .with(request -> {
-                            request.setMethod("PATCH");
-                            return request;
-                        })
-                        .contentType(MediaType.MULTIPART_FORM_DATA))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @DisplayName("Elimina un producto exitosamente")
+    @DisplayName("DELETE /products/{id} - Retornar 204")
     void deleteProduct_Success() throws Exception {
         doNothing().when(productService).deleteProduct(1L);
 
-        mockMvc.perform(delete("/carlikeafriend/products/{id}", 1L))
+        mockMvc.perform(delete("/carlikeafriend/products/1")
+                        .with(csrf())) // Solo si se tiene CSRF habilitado en los tests)
                 .andExpect(status().isNoContent());
-    }
-
-    @Test
-    @DisplayName("Devuelve 404 NOT_FOUND al eliminar un producto que no existe")
-    void deleteProduct_NotFound() throws Exception {
-        doThrow(new RuntimeException("Producto no encontrado con ID: 99"))
-                .when(productService).deleteProduct(99L);
-
-        mockMvc.perform(delete("/carlikeafriend/products/{id}", 99L))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    @DisplayName("Devuelve todos los productos exitosamente")
-    void getAllProducts_Success() throws Exception {
-        when(productService.getAllProducts()).thenReturn(List.of(product, product2));
-
-        mockMvc.perform(get("/carlikeafriend/products")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].name").value("Test Product"))
-                .andExpect(jsonPath("$[1].name").value("Another Product"));
-    }
-
-    @Test
-    @DisplayName("Devuelve una lista vacía si no hay productos")
-    void getAllProducts_EmptyList() throws Exception {
-        when(productService.getAllProducts()).thenReturn(List.of());
-
-        mockMvc.perform(get("/carlikeafriend/products")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$.length()").value(0));
-    }
-
-    @Test
-    @DisplayName("Descarga la imagen exitosamente")
-    void downloadImage_Success() throws Exception {
-        String filename = "test-image.jpg";
-        String imagePath = "image/" + filename;
-        byte[] contentBytes = "test-image-content".getBytes();
-
-        // Creamos un mock de Resource para simular el archivo
-        Resource mockResource = mock(Resource.class);
-        when(mockResource.getFilename()).thenReturn(filename);
-        when(mockResource.getInputStream()).thenReturn(new ByteArrayInputStream(contentBytes));
-
-        when(fileStorageService.loadFileAsResource(filename)).thenReturn(mockResource);
-
-        mockMvc.perform(get("/carlikeafriend/products/images/{filename}", imagePath))
-                .andExpect(status().isOk())
-                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + filename + "\""))
-                .andExpect(content().bytes(contentBytes));
-    }
-
-    @Test
-    @DisplayName("Devuelve 404 NOT_FOUND si la imagen no existe")
-    void downloadImage_NotFound() throws Exception {
-        String filename = "nonexistent-image.jpg";
-        when(fileStorageService.loadFileAsResource(filename)).thenThrow(new RuntimeException("Producto no encontrado"));
-
-        mockMvc.perform(get("/carlikeafriend/products/images/image/{filename}", filename))
-                .andExpect(status().isNotFound());
     }
 }

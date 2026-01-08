@@ -5,6 +5,18 @@
             color: #f4f3f2; /* Cambia el color del texto */
         }
 
+        .btn-add{
+            background-color: #f4f3f2; /* Cambia el color del fondo*/
+            border: 1px solid #2e2e84; /* Cambia el color del borde*/
+            color:  #1f88e6; /* Cambia el color del texto */
+            width: 14rem;
+        }
+
+        .btn-add:hover{
+            background-color: #2e2e84; /* Cambia el fondo al pasar el ratón */
+            color: #f4f3f2; /* Cambia el color del texto */
+        }
+
         .mobile-warning-btn{
             background-color: #f4f3f2;
             border-color:#1f88e6; /* Cambia el color del borde*/ 
@@ -91,16 +103,7 @@
             justify-content: center;
             align-items: center;
         }
-/*
-        @media (max-width: 767.98px) { /* Para dispositivos móviles, ajusta según sea necesario 
-            #admin-panel-content {
-                display: none; /* Oculta el contenido del panel en móviles 
-            }
-            #mobile-warning {
-                display: flex; /* Muestra la advertencia en móviles 
-            }
-        }
-*/
+
         /* icono del mensaje de advertencia */
         .bi-exclamation-triangle-fill{
             font-size: 3rem;
@@ -108,16 +111,15 @@
         }
 
         /* color de texto */
-        .card-text,
         .form-title,
         .form-text,
         .text-admin-panel,
         label.form-label,
-        .text-product-list {
+        .text-list {
             color: #2e2e84;
         }
 
-        /* color de fondo y texto para el Munú Funciones */
+        /* color de fondo y texto para el Menú Funciones */
         .card-header{
             background-color: #1f88e6;
             color: #f4f3f2;

@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "image")
-public class Image {
+public class ProductImage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -18,7 +18,8 @@ public class Image {
     @JoinColumn(name = "product_id", nullable = false) // Columna en la tabla Imagen que referencia a Producto
     @JsonIgnore // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
     private Product product;
-    public Image() {
+
+    public ProductImage() {
     }
 
     public Long getId() {

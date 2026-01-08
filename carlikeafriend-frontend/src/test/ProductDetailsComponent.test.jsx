@@ -42,12 +42,14 @@ describe('ProductDetailsComponent', () => {
     const mockProduct = {
         id: 123,
         name: 'Coche Deportivo',
-        images: [
+        description: 'Un coche muy rápido.',
+        price: 50000,
+        productImages: [
             { id: 101, imagePath: '/path/to/image1.jpg' },
             { id: 102, imagePath: '/path/to/image2.jpg' }
         ],
-        description: 'Un coche muy rápido.',
-        price: 50000,
+        categories: [],
+        features: [],
     };
 
     beforeEach(() => {
@@ -68,7 +70,7 @@ describe('ProductDetailsComponent', () => {
 
         // 4. Simular el clic en el botón que abre el modal.
         // Asumimos que hay un botón o una imagen con un data-testid para abrir el modal.
-        const openModalButton = screen.getAllByRole('button', {name: /Ver más/i})[0];
+        const openModalButton = screen.getAllByRole('button', { name: /Ver más/i })[0];
         fireEvent.click(openModalButton);
 
         // 5. El modal de la galería debe ser visible.
@@ -87,7 +89,7 @@ describe('ProductDetailsComponent', () => {
         render(<ProductDetailsComponent />);
 
         // 3. Simular la apertura del modal.
-        const openModalButton = screen.getAllByRole('button', {name: /Ver más/i})[0];
+        const openModalButton = screen.getAllByRole('button', { name: /Ver más/i })[0];
         fireEvent.click(openModalButton);
 
         // 4. Verificar que el modal está abierto.

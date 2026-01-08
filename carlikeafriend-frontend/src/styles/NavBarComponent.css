@@ -1,39 +1,94 @@
 /* Ajuste para el header fijo */
-        .fixed-top {
-            box-shadow: 0 0.125rem 0.25rem rgb(46, 46, 132, 0.8); /* Sombra */
-            border-bottom-left-radius: 0.5rem; 
-            border-bottom-right-radius: 0.5rem; 
-        }
+.fixed-top {
+    box-shadow: 0 0.125rem 0.25rem rgb(46, 46, 132, 0.8);
+    /* Sombra */
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
 
-        .header-btn {
-            background-color: #1f88e6; /* Cambia el color del fondo*/
-            border-color: #2e2e84; /* Cambia el color del borde*/
-            color: #f4f3f2; /* Cambia el color del texto */
-        }
+.header-btn {
+    background-color: #1f88e6;
+    /* Cambia el color del fondo*/
+    border-color: #2e2e84;
+    /* Cambia el color del borde*/
+    color: #f4f3f2;
+    /* Cambia el color del texto */
+}
 
-        .header-btn:hover {
-            background-color: #2e2e84; /* Cambia el fondo al pasar el ratón */
-            color: #f4f3f2; /* Cambia el color del texto */
-        }
+.header-btn:hover {
+    background-color: #2e2e84;
+    /* Cambia el fondo al pasar el ratón */
+    color: #f4f3f2;
+    /* Cambia el color del texto */
+}
 
-        .header-color { /* color de fondo del header */
-            background-color: #6a5e9b;
-        }
+.header-color {
+    /* color de fondo del header */
+    background-color: #6a5e9b;
+}
 
-        .header-logo-img{ /* Tamaño del logo del header */
-            height: 40%;
-            width: 40%;
-        }
+.header-logo-img {
+    /* Tamaño del logo del header */
+    height: 40%;
+    width: 40%;
+}
 
-        .header-logo-text {
-            font-weight: 700; /* Negrita para el logo */
-            color: #f4f3f2; /* Color para el texto del logo */
-        }
+.header-logo-text {
+    /* Negrita para el logo */
+    font-weight: 700;
+    /* Color para el texto del logo */
+    color: #f4f3f2;
+}
 
-        .header-slogan-text {
-            font-weight: 400; /* Normal para el lema */
-            color: #f4f3f2; /* Color para el lema */
-        }
+.header-slogan-text {
+    /* Normal para el lema */
+    font-weight: 400;
+    /* Color para el lema */
+    color: #f4f3f2;
+}
 
+.dropdown-background-color {
+    background-color: #f4f3f2;
+    /* Sombra */
+    box-shadow: 0 0.125rem 0.25rem rgb(46, 46, 132, 0.8);
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+}
+
+.dropdown-text-muted {
+    /* Cambia color por defecto de text-muted */
+    color: #6a5e9b !important;
+}
+
+/* Cambia el color del borde del spinner */
+.dropdown-text {
+    color: #2e2e84 !important;
+}
+
+.nav-link.background.active{
+    background-color: #6a5e9b  !important;;
+    
+}
+
+.dropdown-menu{
+    min-width: 18.5rem;
+}
+
+
+@media (max-width: 767px) {
+    
+     .container-fluid{
+         align-items: start !important;
+     }
+
+     .dropdown-menu-end{
+        right: auto !important;
+        left: 0 !important;
+        margin-top: 1rem !important;
+     }
+
+     
+         
+}
 
 /* 320px -  768px - 1024px

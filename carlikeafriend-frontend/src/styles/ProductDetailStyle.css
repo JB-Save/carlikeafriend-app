@@ -1,42 +1,66 @@
  /* fondo y altura del header del producto */
- .header-h {
+ .header-product-datail {
      background-color: #6a5e9b;
      height: 100px;
+     position: sticky;
+     z-index: 1020;
+     top: 144px;
  }
+
 
  /* Estilos personalizados para texto del producto */
  .product-title {
-     font-weight: 700;  /* Negrita para el título del producto */
-     color: #f4f3f2;  /* Color para el texto del producto */
+     font-weight: 700;
+     /* Negrita para el título del producto */
+     color: #f4f3f2;
+     /* Color para el texto del producto */
  }
 
- .product-detail-text,
- .modal-title{
+ .modal-title,
+ .product-feature-text {
      color: #2e2e84;
  }
 
- .back-btn {
-     background-color: #1f88e6; /* Cambia el color del fondo*/
-     border-color: #2e2e84; /* Cambia el color del borde*/
-     color: #f4f3f2; /* Cambia el color del texto */
+ .product-detail-text {
+     color: #2e2e84;
+     text-align: justify;
+     line-height: 1.2;
+     font-weight: lighter;
+     font-size: 1rem;
  }
 
-.back-btn:hover {
-     background-color: #2e2e84; /* Cambia el fondo al pasar el ratón */
-     color: #f4f3f2; /* Cambia el color del texto */
+
+
+ .back-btn {
+     background-color: #1f88e6;
+     /* Cambia el color del fondo*/
+     border-color: #2e2e84;
+     /* Cambia el color del borde*/
+     color: #f4f3f2;
+     /* Cambia el color del texto */
+ }
+
+ .back-btn:hover {
+     background-color: #2e2e84;
+     /* Cambia el fondo al pasar el ratón */
+     color: #f4f3f2;
+     /* Cambia el color del texto */
  }
 
  /* Estilos específicos para la galería de imágenes */
  .gallery-main-image {
      width: 100%;
-     height: auto; /* Altura para la imagen principal */
-     object-fit: cover; /* Asegura que la imagen cubra el área sin distorsionarse */
+     height: auto;
+     /* Altura para la imagen principal */
+     object-fit: cover;
+     /* Asegura que la imagen cubra el área sin distorsionarse */
      border-radius: 0.5rem;
  }
 
  .gallery-thumbnail {
      width: 100%;
-     height: auto; /* Altura para las miniaturas */
+     height: auto;
+     /* Altura para las miniaturas */
      object-fit: cover;
      border-radius: 0.5rem;
      cursor: pointer;
@@ -66,3 +90,30 @@
      box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
  }
 
+  @media (min-width: 330px) {
+     .header-product-datail {
+         top: 147px;
+     }
+ }
+ @media (min-width: 421px) {
+     .header-product-datail {
+         top: 165px;
+     }
+ }
+
+ @media (min-width: 717px) {
+     .header-product-datail {
+         top: 175px;
+     }
+ }
+
+  @media (min-width: 768px) {
+     .header-product-datail {
+         top: 135px;
+     }
+ }
+
+
+ 
+
+ 
