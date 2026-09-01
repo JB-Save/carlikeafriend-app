@@ -1,0 +1,44 @@
+/*Tarjeta del producto*/
+ .product-card-hover {
+     transition: all 0.3s ease;
+ }
+
+ .price-color {
+     color: #1f88e6;
+ }
+
+ .product-card-hover:hover {
+     transform: translateY(-8px);
+     box-shadow: 0 15px 30px rgba(46, 46, 132, 0.15) !important;
+ }
+
+ .product-image {
+     transition: transform 0.4s ease;
+ }
+
+ .product-card-hover:hover .product-image {
+     transform: scale(1.08);
+ }
+
+ .badge-custom {
+     background-color: #1f88e6;
+     color: #f4f3f2;
+ }
+
+ .detail-btn {
+     /* Cambia el color del fondo*/
+     background-color: #1f88e6;
+     /* Cambia el color del borde*/
+     border-color: #2e2e84;
+     /* Cambia el color del texto */
+     color: #f4f3f2;
+ }
+
+  .detail-btn-hover:hover {
+     background-color: #1f88e6 !important;
+     color: #f4f3f2 !important;
+ }
+
+ .produc-card-text-muted {
+     color: #6a5e9b !important;
+ }

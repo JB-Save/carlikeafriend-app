@@ -3,24 +3,29 @@ package com.carlikeafriend_backend.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "permission", uniqueConstraints = {
         @UniqueConstraint(columnNames = "name")
 })
-public class Permission {
+public class Permission extends Auditable{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false)
     private String name;
+
     private String description;
 
     @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
     @JsonIgnore
-    private List<Role> roles = new ArrayList<>();
+    private Set<Role> roles = new HashSet<>();
 
     @Version
     private Long version;
@@ -52,23 +57,59 @@ public class Permission {
         this.description = description;
     }
 
-    public List<Role> getRoles() {
-        return roles;
+    public Set<Role> getRoles() {
+        return Collections.unmodifiableSet(this.roles);
     }
 
-    public void setRoles(List<Role> roles) {
+    private void setRoles(Set<Role> roles) {
         this.roles = roles;
     }
 
-    // Método de conveniencia para añadir un rol
-    public void addRole(Role role) {
-        this.roles.add(role);
-        role.getPermissions().add(this);
+    public Long getVersion() {
+        return version;
     }
 
-    // Método de conveniencia para eliminar un rol
-    public void deleteRole(Role role) {
-        this.roles.remove(role);
-        role.getPermissions().remove(this);
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof Permission that)) return false;
+
+       if (this.id == null || that.getId() == null) {
+            return false;
+        }
+
+        return Objects.equals(this.id, that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
+
+    // Roles: (Colecciones con Set) - Método de conveniencia para añadir/eliminar un rol
+    public void addRole(Role role) {
+        if (role != null && this.roles.add(role)) {
+            // Sincronizar el otro lado
+            role.addPermission(this);
+        }
+    }
+
+    public void removeRole(Role role) {
+        if (role != null && this.roles.remove(role)) {
+            // Sincronizar el otro lado
+            role.removePermission(this);
+        }
+    }
+
+    public boolean hasActiveRoles() {
+        //Regla 1: No tiene roles activos.
+        return  this.roles.stream().anyMatch(u -> !u.isDeleted());
+
     }
 }

@@ -6,23 +6,53 @@ import java.util.List;
 public class ProductResponseDTO {
     private Long id;
     private String name;
+    private SimpleResponseDTO make;
     private String description;
-    private double price;
-    private List<CategoryResponseForProductDTO> categories = new ArrayList<>();
+    private Integer passengerCapacity;
+    private Integer baggageCapacity;
+    private Integer numberOfDoors;
+    private List<SimpleResponseDTO> categories = new ArrayList<>();
     private List<FeatureResponseDTO> features = new ArrayList<>();
+    private Double price;
+    private Double baseDepositAmount;
     private List<ImageDTO> productImages = new ArrayList<>();
+    private List<PolicyCompleteResponseDTO> policies = new ArrayList<>();
+    private Double averageRating;
+    private Integer totalReviews;
 
     public ProductResponseDTO() {
     }
 
-    public ProductResponseDTO(Long id, String name, String description, double price, List<CategoryResponseForProductDTO> categories, List<FeatureResponseDTO> features,List<ImageDTO> productImages) {
+    public ProductResponseDTO(Long id,
+                              String name,
+                              SimpleResponseDTO make,
+                              String description,
+                              Integer passengerCapacity,
+                              Integer baggageCapacity,
+                              Integer numberOfDoors,
+                              List<SimpleResponseDTO> categories,
+                              List<FeatureResponseDTO> features,
+                              Double price,
+                              Double baseDepositAmount,
+                              List<ImageDTO> productImages,
+                              List<PolicyCompleteResponseDTO> policies,
+                              Double averageRating,
+                              Integer totalReviews) {
         this.id = id;
         this.name = name;
+        this.make = make;
         this.description = description;
-        this.price = price;
+        this.passengerCapacity = passengerCapacity;
+        this.baggageCapacity = baggageCapacity;
+        this.numberOfDoors = numberOfDoors;
         this.categories = categories;
         this.features = features;
+        this.price = price;
+        this.baseDepositAmount = baseDepositAmount;
         this.productImages = productImages;
+        this.policies = policies;
+        this.averageRating = averageRating;
+        this.totalReviews = totalReviews;
     }
 
     public Long getId() {
@@ -41,6 +71,14 @@ public class ProductResponseDTO {
         this.name = name;
     }
 
+    public SimpleResponseDTO getMake() {
+        return make;
+    }
+
+    public void setMake(SimpleResponseDTO make) {
+        this.make = make;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -49,19 +87,35 @@ public class ProductResponseDTO {
         this.description = description;
     }
 
-    public double getPrice() {
-        return price;
+    public Integer getPassengerCapacity() {
+        return passengerCapacity;
     }
 
-    public void setPrice(double price) {
-        this.price = price;
+    public void setPassengerCapacity(Integer passengerCapacity) {
+        this.passengerCapacity = passengerCapacity;
     }
 
-    public List<CategoryResponseForProductDTO> getCategories() {
+    public Integer getBaggageCapacity() {
+        return baggageCapacity;
+    }
+
+    public void setBaggageCapacity(Integer baggageCapacity) {
+        this.baggageCapacity = baggageCapacity;
+    }
+
+    public Integer getNumberOfDoors() {
+        return numberOfDoors;
+    }
+
+    public void setNumberOfDoors(Integer numberOfDoors) {
+        this.numberOfDoors = numberOfDoors;
+    }
+
+    public List<SimpleResponseDTO> getCategories() {
         return categories;
     }
 
-    public void setCategories(List<CategoryResponseForProductDTO> categories) {
+    public void setCategories(List<SimpleResponseDTO> categories) {
         this.categories = categories;
     }
 
@@ -73,11 +127,51 @@ public class ProductResponseDTO {
         this.features = features;
     }
 
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public Double getBaseDepositAmount() {
+        return baseDepositAmount;
+    }
+
+    public void setBaseDepositAmount(Double baseDepositAmount) {
+        this.baseDepositAmount = baseDepositAmount;
+    }
+
     public List<ImageDTO> getProductImages() {
         return productImages;
     }
 
-    public void setProductImages(List<ImageDTO>productImages) {
+    public void setProductImages(List<ImageDTO> productImages) {
         this.productImages = productImages;
+    }
+
+    public List<PolicyCompleteResponseDTO> getPolicies() {
+        return policies;
+    }
+
+    public void setPolicies(List<PolicyCompleteResponseDTO> policies) {
+        this.policies = policies;
+    }
+
+    public Double getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(Double averageRating) {
+        this.averageRating = averageRating;
+    }
+
+    public Integer getTotalReviews() {
+        return totalReviews;
+    }
+
+    public void setTotalReviews(Integer totalReviews) {
+        this.totalReviews = totalReviews;
     }
 }

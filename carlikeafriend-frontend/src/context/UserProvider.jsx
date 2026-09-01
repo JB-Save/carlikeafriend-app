@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { UserContext } from "./UserContext"
 import { API_CONFIG } from "../config/apiConfig";
 
@@ -6,7 +6,7 @@ import { API_CONFIG } from "../config/apiConfig";
 export const UserProvider = ({ children }) => {
     //Estado para el usuario y para el proceso de carga inicial
     const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(true); // Nuevo estado de carga
+    const [isLoading, setIsLoading] = useState(true);
     const URL = API_CONFIG.AUTH;
     /*
       Función para iniciar sesión.
@@ -69,7 +69,7 @@ export const UserProvider = ({ children }) => {
                             id: freshUserData.id,
                             name: freshUserData.name,
                             lastName: freshUserData.lastName,
-                            userName: freshUserData.email,
+                            userName: freshUserData.userName,
                             roles: freshUserData.roles,
                         };
 
@@ -91,6 +91,14 @@ export const UserProvider = ({ children }) => {
         checkSession();
     }, [login, logout]);
 
+    const contextValue = useMemo(() => ({
+        user,
+        isAuthenticated: !!user,
+        token: user?.token,
+        login,
+        logout
+    }), [user, login, logout]);
+
     // Renderizado Condicional
     // Evita renderizar el resto de la app hasta que se conozca el estado de autenticación.
     if (isLoading) {
@@ -103,14 +111,6 @@ export const UserProvider = ({ children }) => {
                 <p className="mt-3 text-muted">Verificando sesión...</p>
             </div>
         );
-    }
-
-    const contextValue = {
-        user,
-        isAuthenticated: !!user,
-        token: user?.token,
-        login,
-        logout
     }
 
     return (

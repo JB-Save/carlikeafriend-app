@@ -1,131 +1,244 @@
-import { useState, useEffect } from 'react';
-import { useFetch } from '../hooks/useFetch';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { PaginationControlsComponent } from './PaginationControlsComponent';
-import { CardProductComponent } from './CardProductComponent'
+import { ProductCardComponent } from './ProductCardComponent';
 import { useMessageModal } from '../context/MessageModalContext';
+import { extractErrorMessage } from '../utils/extractErrorMessage';
 import { API_CONFIG } from '../config/apiConfig';
+import { useBooking } from '../context/BookingContext';
+import { BookingSearchForm } from './BookingSearchForm';
+import { validateAndCorrectBookingDates } from '../utils/dateHelpers';
+import { format } from 'date-fns';
 
 export const SearchSection = ({ productsPerPage, type }) => {
-
     const { setModalMessage } = useMessageModal();
-    const [allProducts, setAllProducts] = useState([]);
-    const [currentProducts, setCurrentProducts] = useState([]);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [err, setErr] = useState(null);
-    const totalPages = Math.ceil(allProducts.length / productsPerPage);
+    const [allCitiesWithBranches, setAllCitiesWithBranches] = useState([]);
+    const [searchProducts, setSearchProducts] = useState([]);
+    const [searchPage, setSearchPage] = useState(1);
 
-    const URL = API_CONFIG.PRODUCTS;
+    const { bookingData, updateBookingData } = useBooking();
 
-    const { data, isLoading, error, fetchData } = useFetch();
+    const [selectedPickupBranchName, setSelectedPickupBranchName] = useState(
+        bookingData.pickupBranch || null
+    );
 
-    // Este useEffect solo debe ejecutarse una vez al montar el componente.
+    const [hasSearched, setHasSearched] = useState(!!bookingData.pickupBranch);
+    const [generalError, setGeneralError] = useState(null);
+
+    //Estados de carga ciudades con sucursales
+    const [isLoadingCityWithBranch, setIsLoadingCityWithBranch] = useState(true);
+    const CITY_WITH_BRANCHES_URL = API_CONFIG.CITIES_WITH_BRANCHES;
+
+    //Estados de carga de productos
+    const [isLoadingProduct, setIsLoadingProduct] = useState(true);
+    const PRODUCT_URL = API_CONFIG.PRODUCTS_HOME_CATALOGUES;
+    const PRODUCT_FILTER_URL = API_CONFIG.FILTERS;
+
+    // Carga inicial de los datos de productos y ciudad/sucursal.
     useEffect(() => {
-        fetchData(URL, 'GET');
-    }, []);
+        const loadInitialData = async () => {
+            // 1. Iniciamos estados de carga y reseteamos errores
+            setIsLoadingCityWithBranch(true);
+            setIsLoadingProduct(true);
+            setGeneralError(null);
 
-    // Este useEffect procesa los datos una vez que han sido recibidos.
-    useEffect(() => {
-        if (data) {
-            const fetchedProducts = data;
-            // 1. Ordena los productos de forma aleatoria una sola vez
-            const shuffledProducts = fetchedProducts.sort(() => 0.5 - Math.random());
-            // 2. Establece el estado con la lista completa y aleatoria de productos
-            setAllProducts(shuffledProducts);
-        }
+            try {
+                // Las ciudades siempre se cargan para el formulario
+                const citiesPromise = fetch(CITY_WITH_BRANCHES_URL, { method: 'GET' });
 
-        if (error) {
-            console.error(error);
-            setErr(error.message || "Ocurrio un error inesperado.");
+                let productsPromise;
+                let isFilteredSearch = false;
+
+
+                // Si el contexto ya tiene datos (ej. al volver del detalle), ejecutamos esa búsqueda
+                if (bookingData.pickupBranch && bookingData.dateRange && bookingData.dateRange[0] && bookingData.dateRange[1]) {
+                    isFilteredSearch = true;
+
+                    // APLICACIÓN DE LA ARQUITECTURA DE CORRECCIÓN:
+                    // Verificamos y corregimos silenciosamente si la fecha quedó en el pasado.
+                    const corrections = validateAndCorrectBookingDates(
+                        bookingData.dateRange,
+                        bookingData.pickupTime,
+                        bookingData.returnTime
+                    );
+
+                    // Variables de trabajo por defecto son las del contexto actual
+                    let fetchDateRange = bookingData.dateRange;
+                    let fetchPickupTime = bookingData.pickupTime;
+                    let fetchReturnTime = bookingData.returnTime;
+
+                    if (corrections) {
+                        // Si hubo correcciones, usamos las fechas nuevas para el Fetch
+                        fetchDateRange = corrections.dateRange;
+                        fetchPickupTime = corrections.pickupTime;
+                        fetchReturnTime = corrections.returnTime;
+
+                        // Y sincronizamos inmediatamente el Contexto Global.
+                        // Esto hará que BookingSearchForm se actualice visualmente para el usuario.
+                        updateBookingData(corrections);
+                    }
+
+                    const pickupDateStr = format(fetchDateRange[0], 'yyyy-MM-dd');
+                    const returnDateStr = format(fetchDateRange[1], 'yyyy-MM-dd');
+                    const pickupTimeStr = format(fetchPickupTime, 'HH:mm:ss');
+                    const returnTimeStr = format(fetchReturnTime, 'HH:mm:ss');
+
+                    const formattedPickup = `${pickupDateStr}T${pickupTimeStr}`;
+                    const formattedReturn = `${returnDateStr}T${returnTimeStr}`;
+
+
+                    const URL = `${PRODUCT_FILTER_URL}?branchId=${bookingData.pickupBranch.id}&pickupDate=${formattedPickup}&returnDate=${formattedReturn}`;
+                    productsPromise = fetch(URL, { method: 'GET' });
+                    setHasSearched(true);
+                    setSelectedPickupBranchName(bookingData.pickupBranch);
+                } else {
+                    // Si no hay contexto, carga general aleatoria
+                    productsPromise = fetch(PRODUCT_URL, { method: 'GET' });
+                    setHasSearched(false);
+                }
+
+
+                // 2. Lanzamos las peticiones en paralelo
+                const [citiesRes, productsRes] = await Promise.all([citiesPromise, productsPromise]);
+
+                // Validación de respuestas
+                if (!citiesRes.ok || !productsRes.ok) {
+                    const errorResponse = !citiesRes.ok ? citiesRes : productsRes;
+                    const msg = await extractErrorMessage(errorResponse);
+                    throw new Error(msg);
+                };
+
+                const [citiesData, productsData] = await Promise.all([
+                    citiesRes.json(),
+                    productsRes.json()
+                ]);
+
+                setAllCitiesWithBranches(citiesData);
+
+                if (isFilteredSearch) {
+                    setSearchProducts(productsData);
+                } else {
+                    // Mezclamos la flota aleatoria para el home inicial
+                    const shuffledProducts = [...productsData].sort(() => 0.5 - Math.random());
+                    setSearchProducts(shuffledProducts);
+                }
+
+            } catch (error) {
+                console.error("Error en carga inicial de SearchSection: ", error);
+                const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+                setGeneralError(message || "Ocurrió un error inesperado.");
+                setModalMessage("Ocurrió un problema en la aplicación.");
+            } finally {
+                setIsLoadingCityWithBranch(false);
+                setIsLoadingProduct(false);
+            }
+        };
+        loadInitialData();
+    }, [CITY_WITH_BRANCHES_URL, PRODUCT_URL]);
+
+    // Submit manejado por React Hook Form
+    const onSearchSubmit = async (data) => {
+        setHasSearched(true);
+        setIsLoadingProduct(true);
+        setGeneralError(null);
+
+        try {
+
+            // 1. Extraemos la parte de la fecha (YYYY-MM-DD) del calendario doble
+            const pickupDateStr = format(data.dateRange[0], 'yyyy-MM-dd');
+            const returnDateStr = format(data.dateRange[1], 'yyyy-MM-dd');
+
+            // 2. Extraemos la parte de la hora (HH:mm:ss) de los selectores de tiempo
+            const pickupTimeStr = format(data.pickupTime, 'HH:mm:ss');
+            const returnTimeStr = format(data.returnTime, 'HH:mm:ss');
+
+            // 3. Concatenamos con la 'T' para formar el estándar ISO 8601 que espera LocalDateTime
+            // Resultado esperado: "2026-04-20T10:30:00"
+            const formattedPickup = `${pickupDateStr}T${pickupTimeStr}`;
+            const formattedReturn = `${returnDateStr}T${returnTimeStr}`;
+
+
+            const URL = `${PRODUCT_FILTER_URL}?branchId=${data.pickupBranch.id}&pickupDate=${formattedPickup}&returnDate=${formattedReturn}`;
+
+            const response = await fetch(URL, { method: 'GET' });
+
+            if (response.ok) {
+                const filteredData = await response.json();
+                setSearchProducts(filteredData);
+                setSelectedPickupBranchName(data.pickupBranch);
+                setSearchPage(1);
+            } else {
+                const msg = await extractErrorMessage(response);
+                throw new Error(msg);
+            }
+            document.getElementById('search-results')?.scrollIntoView({ behavior: 'smooth' });
+        } catch (error) {
+            console.error("Error al obtener productos: ", error);
+            const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+            setGeneralError(message || "Ocurrió un error inesperado.");
             setModalMessage("Ocurrió un problema en la aplicación.");
+            setSearchProducts([]);
+        } finally {
+            setIsLoadingProduct(false);
         }
-    }, [data, error, setModalMessage]);
-
-    // Este useEffect maneja la paginación. Se ejecuta solo cuando allProducts o currentPage cambian.
-    useEffect(() => {
-        const startIndex = (currentPage - 1) * productsPerPage;
-        const endIndex = startIndex + productsPerPage;
-        const productsToDisplay = allProducts.slice(startIndex, endIndex);
-        setCurrentProducts(productsToDisplay);
-    }, [allProducts, currentPage, productsPerPage]);
-
-    const goToPage = (page) => {
-        let newPage = page;
-        if (newPage < 1) newPage = 1;
-        if (newPage > totalPages && totalPages > 0) newPage = totalPages;
-        if (totalPages === 0) newPage = 1;
-        setCurrentPage(newPage);
     };
 
+    const totalPages = Math.ceil(searchProducts.length / productsPerPage);
+    const currentSearchProductsDisplay = useMemo(() => {
+        const startIndex = (searchPage - 1) * productsPerPage;
+        return searchProducts.slice(startIndex, startIndex + productsPerPage);
+    }, [searchProducts, searchPage, productsPerPage]);
+
     return (
-        <section className="container search-text p-4 rounded-3 shadow-sm mb-5"> {/* Sección de Buscador */}
-            <h3 className="fw-bold search-text mb-3 text-center">Encuentra tu Auto Ideal</h3>
-            <form className="row search-form g-3">
-
-                <div className="col-12 col-lg-4">
-                    <label htmlFor="pickupCity" className="form-label">Ciudad de Recogida</label>
-                    <input type="text" className="form-control" id="pickupCity" placeholder="Ciudad o dirección" />
-                </div>
-
-                <div className="col-12 col-lg-3">
-                    <label htmlFor="pickupDate" className="form-label">Fecha y Hora de Recogida</label>
-                    <div className="row g-2">
-                        <div className="col">
-                            <input type="date" className="form-control" id="pickupDate" />
-                        </div>
-                        <div className="col">
-                            <input type="time" className="form-control" id="pickupTime" step="900" />
-                        </div>
+        <section className="container mb-5">
+            <BookingSearchForm
+                citiesWithBranches={allCitiesWithBranches}
+                onSearchSubmit={onSearchSubmit}
+            />
+            {/* SECCIÓN DE RESULTADOS */}
+            <div className="mb-5" id="search-results">
+                <div className="d-flex align-items-center justify-content-between mb-4 mt-2">
+                    <h4 className="fw-bold mb-0 title-color">
+                        {hasSearched ? `Resultados en ${selectedPickupBranchName ? selectedPickupBranchName.name : 'tu búsqueda'}` : 'Nuestra Flota Aleatoria'}
+                    </h4>
+                    <div className="px-3 py-1 rounded-pill fw-bold text-white shadow-sm" style={{ backgroundColor: '#6A5E9B', fontSize: '0.8rem' }}>
+                        {searchProducts.length} vehículos
                     </div>
                 </div>
 
-                <div className="col-12 col-lg-3">
-                    <label htmlFor="returnDate" className="form-label">Fecha y Hora de Retorno</label>
-                    <div className="row g-2">
-                        <div className="col">
-                            <input type="date" className="form-control" id="returnDate" />
-                        </div>
-                        <div className="col">
-                            <input type="time" className="form-control" id="returnTime" step="900" />
-                        </div>
-                    </div>
-                </div>
+                {generalError && <div className="alert alert-danger text-center rounded-3 shadow-sm">{generalError}</div>}
 
-                <div className="col-12 col-lg-2 d-grid">
-                    <label className="form-label">
-                        &nbsp;
-                    </label>
-                    <button className="btn search-btn mb-4" type="button">Buscar</button>
+                <div className="product-listings-section">
+                    {isLoadingProduct ? (
+                        <div className="text-center py-5">
+                            <div className="spinner-border" style={{ width: '3rem', height: '3rem' }} role="status"></div>
+                            <p className="mt-3 fw-medium text-muted-custom">Actualizando catálogo...</p>
+                        </div>
+                    ) : (!currentSearchProductsDisplay || currentSearchProductsDisplay.length === 0) ? (
+                        <div className="text-center py-5 bg-white rounded-4 shadow-sm border-0">
+                            <i className="bi bi-car-front text-muted-custom fs-1 mb-3 d-block opacity-50"></i>
+                            <h5 className="fw-bold text-muted-custom">Sin disponibilidad en el catálogo.</h5>
+                            <p className="text-muted-custom">Prueba con otra sucursal o fechas diferentes.</p>
+                        </div>
+                    ) : (
+                        <div className="row row-cols-1 row-cols-md-2 g-4">
+                            {
+                                currentSearchProductsDisplay.map(product => (
+                                    <ProductCardComponent key={product.id} product={product} />
+                                ))
+                            }
+                        </div>
+                    )}
+
+                    {searchProducts.length > productsPerPage && (
+                        <PaginationControlsComponent
+                            currentPage={searchPage}
+                            totalPages={totalPages}
+                            goToPage={setSearchPage}
+                            type={type}
+                        />
+                    )}
                 </div>
-            </form>
-            <hr className="my-4" />
-            <h4 className="fw-bold search-text mb-3">Productos Aleatorios para el Buscador (Máx. 10 por página)</h4>
-            {err && <div className="alert alert-danger text-center">{err}</div>}
-            {/* Los productos para el buscador se cargarán aquí dinámicamente */}
-            <div className="product-listings-section my-5">
-                {isLoading ? (
-                    <div className="text-center my-5">
-                        <div className="spinner-border text-primary" role="status"></div>
-                        <p className="mt-2 text-muted">Cargando productos...</p>
-                    </div>
-                ) : (!currentProducts || currentProducts.length === 0) ? (
-                    <div className="text-center text-muted">No hay productos disponibles.</div>
-                ) : (
-                    <div className="row row-cols-1 row-cols-md-2 g-4">
-                        {
-                            currentProducts.map(product => (
-                                <CardProductComponent key={product.id} product={product} />
-                            ))
-                        }
-                    </div>
-                )}
-                {/* Controles de Paginación para búsqueda*/}
-                <PaginationControlsComponent
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    goToPage={goToPage}
-                    type={type}
-                />
             </div>
         </section>
-    )
+    );
 }

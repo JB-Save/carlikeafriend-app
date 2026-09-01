@@ -10,6 +10,13 @@ public class ImageDTO {
     public ImageDTO() {
     }
 
+    public ImageDTO(Long id, String imagePath, String originalName, String contentType) {
+        this.id = id;
+        this.imagePath = imagePath;
+        this.originalName = originalName;
+        this.contentType = contentType;
+    }
+
     public Long getId() {
         return id;
     }

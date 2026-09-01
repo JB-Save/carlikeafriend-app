@@ -1,21 +1,24 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen } from '../utils/test-utils';
 import { beforeEach, describe, expect, vi, it } from 'vitest';
 import { ProductFilterPage } from '../pages/ProductFilterPage';
 import { useProductFilter } from '../hooks/useProductFilter';
-import { BrowserRouter } from 'react-router-dom';
 
-// 1. Mock de hooks y componentes externos
+// 1. Mocks de hooks y componentes externos
 vi.mock('../hooks/useProductFilter', () => ({
     useProductFilter: vi.fn(),
 }));
 
-vi.mock('../components/CardProductComponent', () => ({
-    CardProductComponent: vi.fn(({ product }) => (
+vi.mock('../components/ProductCardComponent', () => ({
+    ProductCardComponent: ({ product }) => (
         <div data-testid="product-card">{product.name}</div>
-    )),
+    ),
 }));
 
-// Mock del formateador de moneda para evitar errores de Intl
+vi.mock('../components/BookingSearchForm', () => ({
+    BookingSearchForm: () => <div data-testid="booking-search-form">Search Form Mock</div>,
+}));
+
 vi.mock('../hooks/useCurrencyFormatter', () => ({
     useCurrencyFormatter: () => ({
         formatCurrency: (val) => `$ ${val}`,
@@ -35,7 +38,7 @@ describe('ProductFilterPage - Pruebas Integrales', () => {
         allFeatures: [{ id: 1, name: 'Aire Acondicionado' }],
         isLoadingCategory: false,
         isLoadingFeature: false,
-        products: [{ id: '1', name: 'Carro Test', price: 1000 }],
+        products: [{ id: '1', name: 'Carro Test', price: 1000, categories: [{ id: 1 }] }],
         isLoadingProduct: false,
         productError: null,
         absoluteMinPrice: 0,
@@ -46,26 +49,25 @@ describe('ProductFilterPage - Pruebas Integrales', () => {
     };
 
     beforeEach(() => {
-        vi.clearAllMocks();
         useProductFilter.mockReturnValue(mockInitialState);
     });
 
-    const renderPage = () => render(
-        <BrowserRouter>
-            <ProductFilterPage />
-        </BrowserRouter>
-    );
-
     it('debe renderizar correctamente y mostrar productos', () => {
-        renderPage();
+        render(<ProductFilterPage />);
         expect(screen.getByTestId('product-card')).toBeInTheDocument();
     });
 
-    it('debe llamar a handleCheckListChange al seleccionar una categoría', () => {
-        renderPage();
-        const checkbox = screen.getByLabelText('SUV');
+    it('debe llamar a handleCheckListChange al seleccionar una categoría', async () => {
+        const user = userEvent.setup();
 
-        fireEvent.click(checkbox);
+        render(<ProductFilterPage />);
+
+        const checkbox = screen.getByRole('checkbox', { name: /SUV/i });
+
+        // Ahora el checkbox ya no debería estar deshabilitado
+        expect(checkbox).not.toBeDisabled();
+
+        await user.click(checkbox);
 
         expect(mockHandlers.handleCheckListChange).toHaveBeenCalledWith(
             1,
@@ -74,40 +76,39 @@ describe('ProductFilterPage - Pruebas Integrales', () => {
         );
     });
 
-    it('debe llamar a handlePriceChange con valores numéricos', () => {
-        renderPage();
+    it('debe llamar a handlePriceChange con valores numéricos', async () => {
+        render(<ProductFilterPage />);
 
-        // Usamos getAllByDisplayValue y tomamos el primer elemento [0]
-        const minPriceInputs = screen.getAllByDisplayValue('0');
-        const maxPriceInputs = screen.getAllByDisplayValue('100000');
+        // 2. Cambiamos spinbutton por slider
+        const sliders = screen.getAllByRole('slider');
+        const minSlider = sliders[0]; // Mínimo
+        const maxSlider = sliders[1]; // Máximo
 
-        // Simulamos el cambio
-        fireEvent.change(minPriceInputs[0], { target: { value: '5000' } });
-
-        // El test espera un NÚMERO, ya que el hook lo convierte internamente
+        // Para inputs de tipo range, usamos fireEvent.change ya que 
+        // userEvent no es ideal para sliders de rango
+        fireEvent.change(minSlider, { target: { value: '5000' } });
         expect(mockHandlers.handlePriceChange).toHaveBeenCalledWith('minPrice', 5000);
 
-        fireEvent.change(maxPriceInputs[0], { target: { value: '80000' } });
+        fireEvent.change(maxSlider, { target: { value: '80000' } });
         expect(mockHandlers.handlePriceChange).toHaveBeenCalledWith('maxPrice', 80000);
     });
 
-    it('debe llamar a handleSortChange al cambiar el ordenamiento', () => {
-        renderPage();
-        // El select tiene el label "Ordenar por"
+    it('debe llamar a handleSortChange al cambiar el ordenamiento', async () => {
+        const user = userEvent.setup();
+        render(<ProductFilterPage />);
+
         const sortSelect = screen.getByLabelText(/Ordenar por/i);
-        fireEvent.change(sortSelect, { target: { value: 'price_desc' } });
+        await user.selectOptions(sortSelect, 'price_desc');
+
         expect(mockHandlers.handleSortChange).toHaveBeenCalledWith('price_desc');
     });
 
-    it('debe ejecutar resetFilters al hacer clic en el botón de limpiar (evitando duplicados)', () => {
-        renderPage();
+    it('debe ejecutar resetFilters al hacer clic en el botón de limpiar', async () => {
+        const user = userEvent.setup();
+        render(<ProductFilterPage />);
 
-        // Buscamos todos los botones con ese texto y usamos el primero, 
-        // o filtramos por una clase específica si existe.
         const resetButtons = screen.getAllByRole('button', { name: /Limpiar Filtros/i });
-
-        // Hacemos clic en el primero (normalmente el de la vista desktop)
-        fireEvent.click(resetButtons[0]);
+        await user.click(resetButtons[0]);
 
         expect(mockHandlers.resetFilters).toHaveBeenCalled();
     });
@@ -118,8 +119,9 @@ describe('ProductFilterPage - Pruebas Integrales', () => {
             isLoadingProduct: true,
             products: []
         });
-        renderPage();
-        expect(screen.getByText(/Cargando productos.../i)).toBeInTheDocument();
+
+        render(<ProductFilterPage />);
+        expect(screen.getByText(/Buscando los mejores vehículos.../i)).toBeInTheDocument();
     });
 
     it('debe mostrar alerta cuando no hay resultados', () => {
@@ -128,7 +130,8 @@ describe('ProductFilterPage - Pruebas Integrales', () => {
             products: [],
             isLoadingProduct: false
         });
-        renderPage();
+
+        render(<ProductFilterPage />);
         expect(screen.getByText(/No se encontraron productos con los filtros seleccionados/i)).toBeInTheDocument();
     });
 });

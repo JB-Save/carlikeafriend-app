@@ -10,17 +10,14 @@ export const FeatureTableComponent = ({ features, setFeatureIdToDelete }) => {
         navigate('/administration/add-feature', { replace: true, state: { featureToEdit: feature } });
     };
 
-
-
-
     return (
         <div className="table-responsive">
-            <table className="table table-hover table-striped table-custom">
+            <table className="table table-hover table-striped table-custom align-middle">
                 <thead>
                     <tr>
-                        <th scope="col">ID</th>
-                        <th scope="col">Nombre</th>
-                        <th className="text-center" scope="col">Acciones</th>
+                        <th scope="col" style={{ width: '10%' }}>ID</th>
+                        <th scope="col" style={{ width: '60%' }}>Nombre</th>
+                        <th className="text-center" scope="col" style={{ width: '30%' }}>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,19 +25,21 @@ export const FeatureTableComponent = ({ features, setFeatureIdToDelete }) => {
                         <tr key={feature.id}>
                             <th scope="row">{feature.id}</th>
                             <td>{feature.name}</td>
-                            <td className="d-flex flex-row justify-content-center gap-3">
-                                <button
-                                    className='btn btn-danger btn-sm rounded-3'
-                                    onClick={() => setFeatureIdToDelete(feature.id)}
-                                >
-                                    Eliminar
-                                </button>
-                                <button
-                                    className='btn btn-success btn-sm rounded-3'
-                                    onClick={() => handleEditClick(feature)}
-                                >
-                                    Editar
-                                </button>
+                            <td className="text-center">
+                                <div className="d-inline-flex gap-2">
+                                    <button
+                                        className='btn btn-danger btn-sm rounded-3'
+                                        onClick={() => setFeatureIdToDelete(feature.id)}
+                                    ><i className="bi bi-trash me-1"></i>
+                                        Eliminar
+                                    </button>
+                                    <button
+                                        className='btn btn-success btn-sm rounded-3'
+                                        onClick={() => handleEditClick(feature)}
+                                    ><i className="bi bi-pencil-square me-1"></i>
+                                        Editar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     ))}

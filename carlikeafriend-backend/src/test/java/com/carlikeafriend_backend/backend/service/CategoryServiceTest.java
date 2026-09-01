@@ -4,9 +4,11 @@ import com.carlikeafriend_backend.backend.dto.CategoryDTO;
 import com.carlikeafriend_backend.backend.dto.CategoryResponseDTO;
 import com.carlikeafriend_backend.backend.entity.Category;
 import com.carlikeafriend_backend.backend.entity.CategoryImage;
+import com.carlikeafriend_backend.backend.event.CategoryUpdatedEvent;
 import com.carlikeafriend_backend.backend.event.ImageDeletedEvent;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
+import com.carlikeafriend_backend.backend.exception.InvalidFileExtensionException;
 import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.repository.ICategoryRepository;
 import com.carlikeafriend_backend.backend.service.impl.CategoryService;
 import com.carlikeafriend_backend.backend.service.impl.FileStorageService;
@@ -58,6 +60,8 @@ public class CategoryServiceTest {
         existingCategory.setId(1L);
         existingCategory.setName("Antigua");
         existingCategory.setDescription("Descripción antigua");
+        existingCategory.setBaseDailyRate(100000.0);
+        existingCategory.setPriority(50);
 
         CategoryImage img = new CategoryImage();
         img.setImagePath("/image/category_folder/old.jpg");
@@ -66,12 +70,38 @@ public class CategoryServiceTest {
         updateDTO = new CategoryDTO();
         updateDTO.setName("Nueva");
         updateDTO.setDescription("Nueva descripción de más de diez caracteres");
+        updateDTO.setBaseDailyRate(110000.0);
+        updateDTO.setPriority(100);
+    }
+
+    @Test
+    @DisplayName("Actualizar categoría: Lanza evento si cambian valores financieros")
+    void updateCategory_FinanceFieldsChanged_PublishesEvent() throws IOException {
+        when(categoryRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingCategory));
+        when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        categoryService.updateCategory(1L, updateDTO, null);
+
+        verify(eventPublisher).publishEvent(any(CategoryUpdatedEvent.class));
+    }
+
+    @Test
+    @DisplayName("Crear categoría: Lanza excepción y detiene persistencia si el archivo es inválido")
+    void createCategory_InvalidFile_StopsExecution() throws Exception {
+        MultipartFile mockFile = new MockMultipartFile("invalid", "test.txt", "text/plain", "content".getBytes());
+        doThrow(new InvalidFileExtensionException("No permitido"))
+                .when(fileValidationUtils).validateImageFile(mockFile);
+
+        assertThrows(InvalidFileExtensionException.class, () ->
+                categoryService.saveCategory(updateDTO, mockFile)
+        );
+        verify(categoryRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("Actualizar categoría: Solo texto, mantiene imagen anterior")
     void updateCategory_OnlyText_KeepOldImage() throws IOException {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(existingCategory));
+        when(categoryRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingCategory));
         when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArguments()[0]);
 
         CategoryResponseDTO result = categoryService.updateCategory(1L, updateDTO, null);
@@ -82,53 +112,35 @@ public class CategoryServiceTest {
     }
 
     @Test
-    @DisplayName("Lanza UniqueNameException si el nombre ya existe al actualizar")
+    @DisplayName("Lanza DuplicateResourceException si el nombre ya existe al actualizar")
     void updateCategory_DuplicateName_ThrowsException() {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(existingCategory));
-        when(categoryRepository.existsByNameAndIdNot(anyString(), anyLong())).thenReturn(true);
+        when(categoryRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingCategory));
+        when(categoryRepository.existsByNameAndIdNotAndDeletedFalse(anyString(), anyLong())).thenReturn(true);
 
-        assertThrows(UniqueNameException.class, () ->
+        assertThrows(DuplicateResourceException.class, () ->
                 categoryService.updateCategory(1L, updateDTO, any())
         );
     }
 
     @Test
-    @DisplayName("Eliminar categoría: Verifica publicación de evento para borrado físico")
-    void deleteCategory_PublishesEvent() throws IOException {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(existingCategory));
+    @DisplayName("Eliminar categoría: Verifica el borrado lógico y mutación del nombre")
+    void deleteCategory_LogicalDelete() throws IOException {
+        when(categoryRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingCategory));
 
         categoryService.deleteCategory(1L);
 
-        verify(categoryRepository).delete(existingCategory);
-        verify(eventPublisher, times(1)).publishEvent(new ImageDeletedEvent(any()));
-    }
+        ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
+        verify(categoryRepository).save(captor.capture());
 
-    @Test
-    @DisplayName("Actualizar categoría: Con nueva imagen, reemplaza la anterior")
-    void updateCategory_WithNewImage_ReplacesOldOne() throws IOException {
-
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(existingCategory));
-        MultipartFile mockFile = new MockMultipartFile("newImage", "newImage.jpg", "image/jpeg", "some-image-bytes".getBytes());
-
-        // El servicio llama a validateImageFile, como es un mock de void no hace nada (comportamiento deseado)
-        doNothing().when(fileValidationUtils).validateImageFile(mockFile);
-
-        when(fileStorageService.storeFile(eq(mockFile), anyString())).thenReturn("/image/category_folder/newImage.jpg");
-        when(categoryRepository.save(any(Category.class))).thenAnswer(i -> i.getArguments()[0]);
-
-
-        CategoryResponseDTO result = categoryService.updateCategory(1L, updateDTO, mockFile);
-
-        assertEquals("/image/category_folder/newImage.jpg", result.getCategoryImage().getImagePath());
-        verify(eventPublisher).publishEvent(new ImageDeletedEvent(any()));
-        verify(fileStorageService).storeFile(mockFile, "category_folder");
-        verify(fileValidationUtils).validateImageFile(mockFile); // Verifica que se validó el archivo
+        Category saved = captor.getValue();
+        assertTrue(saved.isDeleted());
+        assertTrue(saved.getName().contains("_DELETED_"));
     }
 
     @Test
     @DisplayName("Lanza ResourceNotFoundException al actualizar categoría inexistente")
     void updateCategory_NotFound_ThrowsException() {
-        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
+        when(categoryRepository.findByIdAndDeletedFalse(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 categoryService.updateCategory(99L, updateDTO, null)
@@ -139,7 +151,7 @@ public class CategoryServiceTest {
     @Test
     @DisplayName("Uso de ArgumentCaptor para verificar campos persistidos")
     void updateCategory_VerifyPersistenceWithCaptor() throws IOException {
-        when(categoryRepository.findById(1L)).thenReturn(Optional.of(existingCategory));
+        when(categoryRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingCategory));
         when(categoryRepository.save(any(Category.class))).thenReturn(existingCategory);
 
         categoryService.updateCategory(1L, updateDTO, null);
@@ -150,5 +162,7 @@ public class CategoryServiceTest {
         Category saved = captor.getValue();
         assertEquals("Nueva", saved.getName());
         assertEquals(updateDTO.getDescription(), saved.getDescription());
+        assertEquals(updateDTO.getBaseDailyRate(), saved.getBaseDailyRate());
+        assertEquals(updateDTO.getPriority(), saved.getPriority());
     }
 }

@@ -1,10 +1,10 @@
 package com.carlikeafriend_backend.backend.service;
 
 import com.carlikeafriend_backend.backend.dto.RoleDTO;
-import com.carlikeafriend_backend.backend.dto.RoleResponseCompleteDTO;
-import com.carlikeafriend_backend.backend.dto.RoleResponseDTO;
+import com.carlikeafriend_backend.backend.dto.RoleCompleteResponseDTO;
+import com.carlikeafriend_backend.backend.dto.SimpleResponseDTO;
 import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.entity.Role;
 import com.carlikeafriend_backend.backend.repository.IRoleRepository;
 import com.carlikeafriend_backend.backend.service.impl.RoleService;
@@ -15,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -49,10 +50,10 @@ class RoleServiceTest {
     @Test
     @DisplayName("Crear Rol - Éxito")
     void testSaveRole_Success() {
-        when(roleRepository.existsByName(anyString())).thenReturn(false);
+        when(roleRepository.existsByNameAndDeletedFalse(anyString())).thenReturn(false);
         when(roleRepository.save(any(Role.class))).thenReturn(role);
 
-        RoleResponseDTO result = roleService.saveRole(roleDTO);
+        SimpleResponseDTO result = roleService.saveRole(roleDTO);
 
         assertNotNull(result);
         assertEquals("ADMIN", result.getName());
@@ -62,34 +63,36 @@ class RoleServiceTest {
     @Test
     @DisplayName("Crear Role - Error si el nombre del rol ya existe")
     void testSaveRole_ThrowsUniqueNameException() {
-        when(roleRepository.existsByName(anyString())).thenReturn(true);
+        when(roleRepository.existsByNameAndDeletedFalse(anyString())).thenReturn(true);
 
-        assertThrows(UniqueNameException.class, () -> roleService.saveRole(roleDTO));
+        assertThrows(DuplicateResourceException.class, () -> roleService.saveRole(roleDTO));
         verify(roleRepository, never()).save(any(Role.class));
     }
 
     @Test
     @DisplayName("Obtener rol por ID - Éxito")
     void testFindRoleById_Success() {
-        when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
+        when(roleRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(role));
 
-        Optional<RoleResponseCompleteDTO> result = roleService.findRoleById(1L);
+        Optional<RoleCompleteResponseDTO> result = roleService.getRoleById(1L);
 
         assertTrue(result.isPresent());
         assertEquals("ADMIN", result.get().getName());
     }
 
     @Test
-    @DisplayName("Eliminar Producto - Éxito")
+    @DisplayName("Eliminar único usuario ADMIN - Excepción: Violación de integridad")
     void testDeleteRole_Success() {
-        when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
+        when(roleRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(role));
 
-        assertDoesNotThrow(() -> roleService.deleteRole(1L));
+        assertThrows(DataIntegrityViolationException.class, () -> roleService.deleteRole(1L));
+        //assertDoesNotThrow(() -> roleService.deleteRole(1L));
     }
 
     @Test
+    @DisplayName("Eliminar Rol - Excepción: Rol no encontrado")
     void testDeleteRole_ThrowsResourceNotFoundException() {
-        when(roleRepository.findById(1L)).thenReturn(Optional.empty());
+        when(roleRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> roleService.deleteRole(1L));
     }

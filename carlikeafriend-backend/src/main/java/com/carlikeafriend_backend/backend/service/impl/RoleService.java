@@ -2,13 +2,15 @@ package com.carlikeafriend_backend.backend.service.impl;
 
 import com.carlikeafriend_backend.backend.dto.*;
 import com.carlikeafriend_backend.backend.entity.*;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.repository.*;
 import com.carlikeafriend_backend.backend.service.IRoleService;
+import com.carlikeafriend_backend.backend.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,152 +34,135 @@ public class RoleService implements IRoleService {
 
     @Override
     @Transactional
-    public RoleResponseDTO saveRole(RoleDTO roleDTO) throws UniqueNameException {
+    public SimpleResponseDTO saveRole(RoleDTO roleDTO) throws DuplicateResourceException {
 
-        logger.info("Intentando guardar nuevo rol: {}", roleDTO.getName());
+        String roleName = StringUtils.normalizeToUpperCase(roleDTO.getName());
+
+        logger.info("Intentando guardar nuevo rol: {}", roleName);
 
         // Validación de duplicados por nombre
-        if (roleRepository.existsByName(roleDTO.getName())) {
-            logger.warn("El nombre del rol ya existe: {}", roleDTO.getName());
-            throw new UniqueNameException("El nombre del role ya existe.");
+        if (roleRepository.existsByNameAndDeletedFalse(roleName)) {
+            logger.warn("Ya existe un rol activo con el nombre: {}", roleName);
+            throw new DuplicateResourceException("Ya existe un rol activo con el nombre: " + roleName);
         }
 
         // Mapear DTO a Entidad
         Role role = new Role();
-        role.setName(roleDTO.getName());
+        role.setName(roleName);
         role.setDescription(roleDTO.getDescription());
 
-        //Asociar Permisos
-        Set<Permission> managedPermissions = resolvePermissions(roleDTO.getPermissions());
-        if(!managedPermissions.isEmpty()){
-            managedPermissions.forEach(perm -> perm.addRole(role));
-        }
+        // Usar método auxiliar
+        updatePermissions(role, roleDTO.getPermissions());
 
         Role savedRole = roleRepository.save(role);
-        logger.info("Rol guardado con ID: {}", savedRole.getId());
-        return convertToDto(savedRole);
+        logger.info("Rol guardado exitosamente con ID: {}", savedRole.getId());
+        return mapToRoleDto(savedRole);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<RoleResponseCompleteDTO> findAllRoles() {
+    public List<RoleCompleteResponseDTO> getAllRoles() {
         logger.info("Buscando todos los roles.");
-        return roleRepository.findAll().stream()
-                .map(this::convertRoleResponseCompleteDto)
+        return roleRepository.findAllByDeletedFalse().stream()
+                .map(this::mapToRoleCompleteDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<RoleResponseCompleteDTO> findRoleById(Long id) {
+    public Optional<RoleCompleteResponseDTO> getRoleById(Long id) {
         logger.info("Buscando rol con ID: {}", id);
-        return roleRepository.findById(id)
-                .map(this::convertRoleResponseCompleteDto);
+        return roleRepository.findByIdAndDeletedFalse(id)
+                .map(this::mapToRoleCompleteDto);
     }
 
     @Override
     @Transactional
-    public RoleResponseDTO updateRole(Long id, RoleDTO roleDTO) throws UniqueNameException {
+    public SimpleResponseDTO updateRole(Long id, RoleDTO roleDTO) throws DuplicateResourceException {
         logger.info("Intentando actualizar rol con ID: {}", id);
 
-        Role existingRole = roleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Role no encontrado con ID: " + id));
+        String roleName = StringUtils.normalizeToUpperCase(roleDTO.getName());
 
-        // Validar que el nombre del rol sea único, excluyendo el rol actual
-        if (roleDTO.getName() != null && !roleDTO.getName().equals(existingRole.getName()) && roleRepository.existsByNameAndIdNot(roleDTO.getName(), id)) {
-            throw new UniqueNameException("El nombre del rol ya existe.");
+        Role existingRole = roleRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se puede actualizar: Role no encontrado con ID: " + id));
+
+        // Validar que el nombre del rol activo sea único, excluyendo el rol actual
+        if (roleName != null && !roleName.equals(StringUtils.normalizeToUpperCase(existingRole.getName()))) {
+            if (roleRepository.existsByNameAndIdNotAndDeletedFalse(roleName, id)) {
+                throw new DuplicateResourceException("El nombre " + roleName + " ya está en uso por otro rol activo.");
+            }
+            existingRole.setName(roleName);
         }
 
         // Actualizar datos básicos del rol
-        Optional.ofNullable(roleDTO.getName()).ifPresent(existingRole::setName);
         Optional.ofNullable(roleDTO.getDescription()).ifPresent(existingRole::setDescription);
 
-        // Actualizar relaciones (Lógica simplificada usando métodos auxiliares)
-        updatePermissions(existingRole, roleDTO.getPermissions());
+        // Usar método auxiliar
+        if (roleDTO.getPermissions() != null) {
+            updatePermissions(existingRole, roleDTO.getPermissions());
+        }
 
         Role updatedRole = roleRepository.save(existingRole);
-        return convertToDto(updatedRole);
+        return mapToRoleDto(updatedRole);
     }
 
     @Override
     @Transactional
     public void deleteRole(Long id) {
-        Role role = roleRepository.findById(id)
+        Role role = roleRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Rol no encontrado con ID: " + id));
 
-        roleRepository.delete(role);
-        logger.warn("Rol eliminado con ID: {}", id);
-    }
-
-    // Métodos Auxiliares para limpiar el código principal
-
-    private Set<Permission> resolvePermissions(Set<Long> ids) {
-        Set<Permission> permissions = new HashSet<>();
-        if (ids != null) {
-            ids.stream().filter(Objects::nonNull).forEach(id -> {
-                permissions.add(permissionRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Permiso no encontrado con ID: " + id)));
-            });
+        // Protección de roles del sistema
+        if (role.isBaseRole()) {
+            throw new DataIntegrityViolationException("Los roles principales del sistema (ADMIN/USER) no pueden ser eliminados.");
         }
-        return permissions;
+
+        if (role.hasActiveUsers()) {
+            throw new DataIntegrityViolationException("No se puede eliminar: Existen usuarios activos asociados a este rol.");
+        }
+
+        // Si pasa ambas, procedemos al borrado lógico (Sufijo + deleted = true)
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        role.setName(role.getName() + "_DELETED_" + timestamp);
+
+        role.setDeleted(true);
+
+        roleRepository.save(role);
+        logger.info("Categoría con ID: {} borrada lógicamente.", id);
     }
+
+    // MÉTODOS AUXILIARES
 
     private void updatePermissions(Role role, Set<Long> newIds) {
-        if (newIds == null) return;
-        Set<Long> finalIds = newIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        // 1. Limpieza Bidireccional
+        if (role.getPermissions() != null) {
+            // Iterar sobre copia
+            new ArrayList<>(role.getPermissions()).forEach(permission -> {
+                permission.removeRole(role); // Método de conveniencia en Permission
+            });
+        }
 
-        // Eliminar las que no están
-       role.getPermissions().removeIf(c -> !finalIds.contains(c.getId()));
-
-        // Agregar las nuevas
-        for (Long id : finalIds) {
-            if (role.getPermissions().stream().noneMatch(c -> c.getId().equals(id))) {
-               role.getPermissions().add(permissionRepository.findById(id)
-                        .orElseThrow(() -> new ResourceNotFoundException("Permiso no encontrado con ID: " + id)));
-            }
+        // 2. Asignación usando método de conveniencia de Permission
+        if (newIds != null && !newIds.isEmpty()) {
+            newIds.stream().filter(Objects::nonNull).forEach(id -> {
+                Permission permission = permissionRepository.findById(id)
+                        .orElseThrow(() -> new ResourceNotFoundException("Permiso no encontrado con ID: " + id));
+                permission.addRole(role); // Sincroniza ambos lados
+            });
         }
     }
 
-
-    private RoleResponseDTO convertToDto(Role role) {
-        List<PermissionResponseDTO> permissionDtos = new ArrayList<>();
-        PermissionResponseDTO permissionDto = null;
-        if (role.getPermissions() != null) {
-            for (Permission permission : role.getPermissions()) {
-                if (permission != null) {
-                    permissionDto = new PermissionResponseDTO();
-                    permissionDto.setId(permission.getId());
-                    permissionDto.setName(permission.getName());
-                    permissionDtos.add(permissionDto);
-                }
-            }
-        }
-
-        return new RoleResponseDTO(
-                role.getId(),
-                role.getName()
-        );
+    private SimpleResponseDTO mapToRoleDto(Role role) {
+        return new SimpleResponseDTO(role.getId(), role.getName());
     }
 
-    private RoleResponseCompleteDTO convertRoleResponseCompleteDto(Role role) {
-        List<PermissionResponseDTO> permissionDtos = new ArrayList<>();
-        PermissionResponseDTO permissionDto = null;
+    private RoleCompleteResponseDTO mapToRoleCompleteDto(Role role) {
+        List<SimpleResponseDTO> permissionDtos = new ArrayList<>();
         if (role.getPermissions() != null) {
             for (Permission permission : role.getPermissions()) {
-                if (permission != null) {
-                    permissionDto = new PermissionResponseDTO();
-                    permissionDto.setId(permission.getId());
-                    permissionDto.setName(permission.getName());
-                    permissionDtos.add(permissionDto);
-                }
+                permissionDtos.add(new SimpleResponseDTO(permission.getId(), permission.getName()));
             }
         }
-
-        return new RoleResponseCompleteDTO(
-                role.getId(),
-                role.getName(),
-                role.getDescription(),
-                permissionDtos
-        );
+        return new RoleCompleteResponseDTO(role.getId(), role.getName(), role.getDescription(), permissionDtos);
     }
 }

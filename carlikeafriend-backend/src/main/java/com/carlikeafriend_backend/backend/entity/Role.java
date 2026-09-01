@@ -3,16 +3,16 @@ package com.carlikeafriend_backend.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Entity
 @Table(name = "role", uniqueConstraints = {
         @UniqueConstraint(columnNames = "name")
 })
-public class Role {
+public class Role extends Auditable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,7 +22,7 @@ public class Role {
 
     @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
     @JsonIgnore
-    private List<User> users = new ArrayList<>();
+    private Set<User> users = new HashSet<>();
 
     @ManyToMany(cascade = {CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH}, fetch = FetchType.LAZY)
     @JoinTable(
@@ -62,31 +62,91 @@ public class Role {
         this.description = description;
     }
 
-    public List<User> getUsers() {
-        return users;
+    public Set<User> getUsers() {
+        return Collections.unmodifiableSet(this.users);
     }
 
-    public void setUsers(List<User> users) {
+    private void setUsers(Set<User> users) {
         this.users = users;
     }
 
     public Set<Permission> getPermissions() {
-        return permissions;
+        return Collections.unmodifiableSet(this.permissions);
     }
 
-    public void setPermissions(Set<Permission> permissions) {
+    private void setPermissions(Set<Permission> permissions) {
         this.permissions = permissions;
     }
 
-    // Método de conveniencia para añadir un usuario
-    public void addUser(User user) {
-        this.users.add(user);
-        user.getRoles().add(this);
+    public Long getVersion() {
+        return version;
     }
 
-    // Método de conveniencia para eliminar un usuario
-    public void deleteUser(User user) {
-        this.users.remove(user);
-        user.getRoles().remove(this);
+    public void setVersion(Long version) {
+        this.version = version;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof Role that)) return false;
+
+        if (this.id == null || that.getId() == null) {
+            return false;
+        }
+
+        return Objects.equals(this.id, that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
+
+    // Usuarios: Colecciones con Set. Método de conveniencia para añadir/remover un usuario (Inverse Side) -
+    public void addUser(User user) {
+        if (user != null && this.users.add(user)) {
+            // Sincronizar el otro lado
+            user.addRole(this);
+        }
+    }
+
+
+    public void removeUser(User user) {
+        if (user != null && this.users.remove(user)) {
+            // Sincronizar el otro lado
+            user.removeRole(this);
+        }
+    }
+
+    // Permisos: Colecciones con Set (Owner Side)  - Aunque la lógica principal se gestiona en RoleService
+    public void addPermission(Permission permission) {
+        if (permission != null && this.permissions.add(permission)) {
+            // Sincronizar el otro lado
+            permission.addRole(this);
+
+        }
+    }
+
+    public void removePermission(Permission permission) {
+        if (permission != null && this.permissions.remove(permission)) {
+            // Sincronizar el otro lado
+            permission.removeRole(this);
+        }
+    }
+
+    //Método para borrado Lógico de Role
+    public boolean isBaseRole() {
+        //Regla 1: Protección de roles del sistema
+        return "ADMIN".equals(this.name) || "USER".equals(this.name);
+    }
+
+    public boolean hasActiveUsers() {
+        //Regla 2: No tien usuarios activos. Devuelve TRUE si al menos un usuario NO está borrado
+        return  this.users.stream().anyMatch(u -> !u.isDeleted());
+
     }
 }
+

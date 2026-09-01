@@ -3,6 +3,7 @@ package com.carlikeafriend_backend.backend.controller;
 import com.carlikeafriend_backend.backend.dto.FeatureDTO;
 import com.carlikeafriend_backend.backend.dto.FeatureResponseDTO;
 import com.carlikeafriend_backend.backend.dto.ImageDTO;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.service.IFeatureService;
 import com.carlikeafriend_backend.backend.service.IFileStorageService;
 import com.carlikeafriend_backend.backend.service.IJwtService;
@@ -22,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.io.ByteArrayInputStream;
 import java.util.List;
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -81,11 +83,35 @@ class FeatureControllerTest {
     @Test
     @DisplayName("GET /features - Obtener todas las características exitosamente")
     void getAllFeatures_Success() throws Exception {
-        when(featureService.findAllFeatures()).thenReturn(List.of(featureResponseDTO));
+        when(featureService.getAllFeatures()).thenReturn(List.of(featureResponseDTO));
 
         mockMvc.perform(get("/carlikeafriend/features"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].name").value("Aire Acondicionado"));
+    }
+
+    @Test
+    @DisplayName("GET /features/{id} - Devuelve 404 si la característica no existe")
+    void getFeatureById_NotFound() throws Exception {
+        when(featureService.getFeatureById(99L)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/carlikeafriend/features/{id}", 99L))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("POST /features - Devuelve 409 Conflict al duplicar nombre")
+    void createFeature_DuplicateName_Returns409() throws Exception {
+        MockMultipartFile featurePart = new MockMultipartFile(
+                "feature", "", "application/json", objectMapper.writeValueAsBytes(featureDTO));
+
+        when(featureService.saveFeature(any(), any()))
+                .thenThrow(new DuplicateResourceException("Ya existe"));
+
+        mockMvc.perform(multipart("/carlikeafriend/features")
+                        .file(featurePart)
+                        .with(csrf()))
+                .andExpect(status().isConflict());
     }
 
     @Test

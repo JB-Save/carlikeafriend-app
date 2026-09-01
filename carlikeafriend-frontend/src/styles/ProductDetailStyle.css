@@ -1,74 +1,147 @@
  /* fondo y altura del header del producto */
  .header-product-datail {
-     background-color: #6a5e9b;
+     /* Navy */
+     background-color: #2e2e84;
+     /* Acento en Blue */
+     border-bottom: 4px solid #1f88e6;
+     border-bottom-left-radius: 1.5rem;
+     border-bottom-right-radius: 1.5rem;
      height: 100px;
      position: sticky;
      z-index: 1020;
-     top: 144px;
+     top: 145px;
+     transition: top 0.3s ease;
  }
 
 
  /* Estilos personalizados para texto del producto */
  .product-title {
-     font-weight: 700;
      /* Negrita para el título del producto */
-     color: #f4f3f2;
+     font-weight: 700;
      /* Color para el texto del producto */
+     color: #f4f3f2;
  }
 
  .modal-title,
+ .product-policy-title,
  .product-feature-text {
      color: #2e2e84;
+     font-weight: 700;
  }
 
  .product-detail-text {
      color: #2e2e84;
      text-align: justify;
-     line-height: 1.2;
-     font-weight: lighter;
+     line-height: 1.5;
+     /* Mejor legibilidad */
+     font-weight: 400;
      font-size: 1rem;
  }
 
+ .product-detail-text-muted {
+     color: #6a5e9b !important;
+ }
+
+ .product-detail-text-primary {
+     color: #1f88e6 !important;
+ }
 
 
  .back-btn {
-     background-color: #1f88e6;
-     /* Cambia el color del fondo*/
-     border-color: #2e2e84;
-     /* Cambia el color del borde*/
-     color: #f4f3f2;
-     /* Cambia el color del texto */
+     background-color: #f4f3f2;
+     border: 2px solid #2e2e84;
+     color: #2e2e84;
+     font-weight: 600;
+     border-radius: 0.75rem;
+     transition: all 0.2s ease-in-out;
  }
 
  .back-btn:hover {
      background-color: #2e2e84;
-     /* Cambia el fondo al pasar el ratón */
+     border: 2px solid #f4f3f2;
      color: #f4f3f2;
-     /* Cambia el color del texto */
+     transform: translateX(-3px);
+ }
+
+ .reservation-btn {
+     background-color: #1f88e6;
+     color: #f4f3f2;
+     font-weight: 700;
+     font-size: 0.95rem;
+     letter-spacing: 0.5px;
+     padding: 0.8rem 2.5rem;
+     border: none;
+     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+
+ }
+
+ .reservation-btn:hover {
+     background-color: #2e2e84 !important;
+     color: #f4f3f2 !important;
+     transform: translateY(-2px);
+     box-shadow: 0 8px 20px rgba(46, 46, 132, 0.25) !important;
+ }
+
+ /* Clase auxiliar para el peso del precio */
+ .fw-extrabold {
+     font-weight: 800;
+ }
+
+ /* Espaciado de letras para el label pequeño */
+ .tracking-wider {
+     letter-spacing: 1px;
  }
 
  /* Estilos específicos para la galería de imágenes */
  .gallery-main-image {
      width: 100%;
-     height: auto;
      /* Altura para la imagen principal */
-     object-fit: cover;
+     height: auto;
      /* Asegura que la imagen cubra el área sin distorsionarse */
-     border-radius: 0.5rem;
+     object-fit: cover;
+     border-radius: 1rem;
+     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
  }
 
  .gallery-thumbnail {
      width: 100%;
-     height: auto;
-     /* Altura para las miniaturas */
+     height: 100%;
+     min-height: 120px;
      object-fit: cover;
-     border-radius: 0.5rem;
+     border-radius: 0.75rem;
      cursor: pointer;
-     transition: transform 0.2s ease-in-out;
+     transition: all 0.3s ease;
+     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
  }
 
  .gallery-thumbnail:hover {
-     transform: scale(1.05);
+     transform: scale(1.03);
+     box-shadow: 0 4px 12px rgba(46, 46, 132, 0.2);
+ }
+
+ .main-image-wrapper {
+     position: relative;
+     width: 100%;
+     display: flex;
+     background-color: #f4f3f2;
+ }
+
+ .main-image-responsive {
+     width: 100%;
+     height: auto !important;
+     object-fit: contain !important;
+ }
+
+ @media (min-width: 768px) {
+     .main-image-wrapper {
+         height: 100%;
+     }
+
+     .main-image-responsive {
+         height: 100% !important;
+         object-fit: cover !important;
+     }
  }
 
  /* Estilo para el modal de galería completa */
@@ -87,33 +160,26 @@
 
  .detail-content-section {
      background-color: #f4f3f2;
-     box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
+     border: 1px solid rgba(46, 46, 132, 0.1);
+     box-shadow: 0 10px 30px rgba(46, 46, 132, 0.12);
+     position: relative;
+     z-index: 1;
  }
 
-  @media (min-width: 330px) {
+ @media (min-width: 313px) {
      .header-product-datail {
-         top: 147px;
-     }
- }
- @media (min-width: 421px) {
-     .header-product-datail {
-         top: 165px;
+         top: 121px;
      }
  }
 
  @media (min-width: 717px) {
      .header-product-datail {
-         top: 175px;
+         top: 125px;
      }
  }
 
-  @media (min-width: 768px) {
+ @media (min-width: 768px) {
      .header-product-datail {
-         top: 135px;
+         top: 85px;
      }
  }
-
-
- 
-
- 

@@ -3,6 +3,8 @@ package com.carlikeafriend_backend.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.Objects;
+
 @Entity
 @Table(name = "category_image")
 public class CategoryImage {
@@ -15,7 +17,8 @@ public class CategoryImage {
     private String contentType;
 
     @OneToOne(mappedBy = "categoryImage")
-    @JsonIgnore // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
+    @JsonIgnore
+    // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
     private Category category;
 
     public CategoryImage() {
@@ -58,6 +61,35 @@ public class CategoryImage {
     }
 
     public void setCategory(Category category) {
-        this.category = category;
+        if (this.category == category) return; // 1. Cláusula de guarda
+
+        Category oldCategory = this.category;
+        this.category = category; // 2. Asignar nuevo valor
+
+        // 3. Sincronización bidireccional
+        if (oldCategory != null && oldCategory.getCategoryImage() == this) {
+            oldCategory.setCategoryImage(null);
+        }
+        if (category != null && category.getCategoryImage() != this) {
+            category.setCategoryImage(this);
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof CategoryImage that)) return false;
+
+        if (this.id == null || that.getId() == null) {
+            return false;
+        }
+
+        return Objects.equals(this.id, that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

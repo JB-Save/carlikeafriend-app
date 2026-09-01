@@ -1,7 +1,7 @@
 package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.*;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.service.IRoleService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,32 +24,32 @@ public class RoleController {
     }
 
     @PostMapping("/roles")
-    public ResponseEntity<RoleResponseDTO> saveRole(@RequestBody @Valid RoleDTO roleDTO)
-            throws UniqueNameException {
-        RoleResponseDTO savedRole = roleService.saveRole(roleDTO);
+    public ResponseEntity<SimpleResponseDTO> saveRole(@RequestBody @Valid RoleDTO roleDTO)
+            throws DuplicateResourceException {
+        SimpleResponseDTO savedRole = roleService.saveRole(roleDTO);
         return new ResponseEntity<>(savedRole, HttpStatus.CREATED);
     }
 
     @GetMapping("/roles")
-    public ResponseEntity<List<RoleResponseCompleteDTO>> findAllRoles() {
-        return new ResponseEntity<>(roleService.findAllRoles(), HttpStatus.OK);
+    public ResponseEntity<List<RoleCompleteResponseDTO>> getAllRoles() {
+        return new ResponseEntity<>(roleService.getAllRoles(), HttpStatus.OK);
     }
 
     @GetMapping("/roles/{id}")
-    public ResponseEntity<RoleResponseCompleteDTO> findRoleById(@PathVariable Long id) {
-        Optional<RoleResponseCompleteDTO> roleDTO = roleService.findRoleById(id);
+    public ResponseEntity<RoleCompleteResponseDTO> getRoleById(@PathVariable Long id) {
+        Optional<RoleCompleteResponseDTO> roleDTO = roleService.getRoleById(id);
         return roleDTO.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PutMapping("/roles/{id}")
     //@PatchMapping("/roles/{id}")
-    public ResponseEntity<RoleResponseDTO> updateRole(
+    public ResponseEntity<SimpleResponseDTO> updateRole(
             @PathVariable Long id,
             @RequestBody @Valid RoleDTO roleDTO)
-            throws UniqueNameException {
+            throws DuplicateResourceException {
 
-        RoleResponseDTO updatedRole = roleService.updateRole(id, roleDTO);
+        SimpleResponseDTO updatedRole = roleService.updateRole(id, roleDTO);
         return new ResponseEntity<>(updatedRole, HttpStatus.OK);
 
     }

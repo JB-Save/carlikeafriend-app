@@ -1,10 +1,12 @@
-import { Link, NavLink, useNavigate } from "react-router-dom"
-import { useContext, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom"
+import { useContext, useState, useEffect } from "react";
 import { UserContext } from "../context/UserContext";
+import { getFormattedName, getInitials } from '../utils/stringHelpers';
 import '../styles/NavBarComponent.css';
 
 export const NavBarComponent = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { isAuthenticated, user, logout } = useContext(UserContext); // Obtener estado y funciones
     const [allowedRoles, setAllowedRoles] = useState(["ADMIN"]);
 
@@ -22,40 +24,32 @@ export const NavBarComponent = () => {
         navigate("/"); // Redirige a la página de inicio
     }
 
-    const firstName = (user) => {
-        let firstName = '';
-        let name = user.name.split(' ');
-        if (name.length > 0) {
-            firstName = name[0].charAt(0).toUpperCase() + name[0].slice(1).toLowerCase();
-        }
-        return firstName;
-    }
+    const displayName = getFormattedName(user);
+    const initials = getInitials(displayName !== 'Usuario Anónimo' ? displayName : '');
 
-    const firstLastName = (user) => {
-        let firstLastName = '';
-        let lastName = user.lastName.split(' ');
-        if (lastName.length > 0) {
-            firstLastName = lastName[0].charAt(0).toUpperCase() + lastName[0].slice(1).toLowerCase();
-        }
-        return firstLastName;
-    }
-
-    const initials = (user) => {
-        let initials = '';
-        if (user.name.length > 0 && user.lastName.length > 0) {
-            initials = user.name.charAt(0).toUpperCase() + user.lastName.charAt(0).toUpperCase();
-        }
-        return initials;
-    }
-
-    const hasAuthority = (authorities) => {
+    const hasAuthority = () => {
+        if (!user || !user.roles) return false;
         const userRoles = user.roles.map(role => role.name);
-        return userRoles.some(userRole => authorities.includes(userRole));
+        return userRoles.some(userRole => allowedRoles.includes(userRole));
     }
+
+    // Expulsa al usuario al inicio si pierde los privilegios estando en el panel
+    useEffect(() => {
+        // Si el usuario está autenticado, la ruta actual empieza por "/administration" y ya NO tiene autoridad...
+        if (isAuthenticated && location.pathname.startsWith('/administration') && user && user.roles) {
+
+            const userRoles = user.roles.map(role => role.name);
+            const userHasAccess = userRoles.some(userRole => allowedRoles.includes(userRole));
+
+            if (!userHasAccess) {
+                navigate('/'); // Lo redirigimos al home inmediatamente
+            }
+        }
+    }, [isAuthenticated, user?.roles, allowedRoles, location.pathname, navigate]); // Se ejecuta cada vez que el usuario o la ruta cambien
 
     return (
 
-        <header className="navbar navbar-expand-lg header-color fixed-top py-3">  {/* Encabezado fijo y responsivo con Bootstrap */}
+        <header className="navbar navbar-expand-lg header-color sticky-top py-3">  {/* Encabezado fijo y responsivo con Bootstrap ---fixed-top---*/}
             <div className="container-fluid d-flex flex-column flex-md-row">
                 { /* Bloque del logotipo y lema (alineado a la izquierda) */}
                 <NavLink to="/" className="navbar-brand d-flex align-items-center me-auto" >
@@ -74,21 +68,18 @@ export const NavBarComponent = () => {
                         <li className="nav-item dropdown list-unstyled ">
                             <div className="nav-link background dropdown-toggle d-flex align-items-center p-0" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <div className="rounded-circle header-btn d-flex align-items-center justify-content-center" style={{ width: '40px', height: '40px', fontSize: '1.25rem' }}>
-                                    <span>{initials(user)}</span>
+                                    <span>{initials}</span>
                                 </div>
                             </div>
                             <ul className="dropdown-menu dropdown-menu-end dropdown-background-color mt-5" aria-labelledby="navbarDropdownMenuLink">
                                 <div className="d-flex align-items-center px-3 pt-2">
                                     <div className="rounded-circle header-btn d-flex align-items-center justify-content-center py-2 px-3" style={{ width: '40px', height: '40px', fontSize: '1.25rem' }}>
-                                        <span>{initials(user)}</span>
+                                        <span>{initials}</span>
                                     </div>
                                     <div className="ms-2" >
                                         <div className="dropdown-text text-start">
                                             <span className="fw-bold">
-                                                {`
-                                        ${firstName(user)} 
-                                        ${firstLastName(user)}
-                                        `}
+                                                {displayName}
                                             </span>
                                         </div>
                                         <div className="dropdown-text-muted text-break text-start small">{user.userName.toLowerCase()}</div>
@@ -98,7 +89,7 @@ export const NavBarComponent = () => {
                                     <hr className="dropdown-divider" />
                                 </li>
 
-                                {hasAuthority(allowedRoles) && (
+                                {hasAuthority() && (
                                     <>
                                         <li>
                                             <Link className="dropdown-item dropdown-text" to="/administration">
@@ -113,8 +104,8 @@ export const NavBarComponent = () => {
                                 )}
 
                                 <li>
-                                    <Link className="dropdown-item dropdown-text" to="/profile">
-                                        Ver Perfil
+                                    <Link className="dropdown-item dropdown-text" to="/my-account">
+                                        Mi Cuenta
                                     </Link>
                                 </li>
                                 <li>

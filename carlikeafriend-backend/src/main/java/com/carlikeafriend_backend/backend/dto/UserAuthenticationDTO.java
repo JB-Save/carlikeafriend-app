@@ -7,12 +7,12 @@ import jakarta.validation.constraints.Size;
 
 public class UserAuthenticationDTO {
 
-    @NotBlank(message = "El correo electrónico no debe estar vacío")
+    @NotBlank(message = "El correo electrónico es obligatorio")
     @Email(message = "El formato del email es inválido")
     @Size(max = 255, message = "El email no debe exceder los 255 caracteres")
     private String email;
 
-    @NotBlank(message = "La Contraseña no debe estar vacía")
+    @NotBlank(message = "La contraseña es obligatoria")
     @Pattern(regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$",
             message = "La contraseña debe tener al menos 8 caracteres, incluir una mayúscula, una minúscula, un número y un carácter especial.")
     private String password;

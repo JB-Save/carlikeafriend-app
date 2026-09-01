@@ -1,8 +1,9 @@
 package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.PermissionDTO;
-import com.carlikeafriend_backend.backend.dto.PermissionResponseCompleteDTO;
-import com.carlikeafriend_backend.backend.dto.PermissionResponseDTO;
+import com.carlikeafriend_backend.backend.dto.PermissionCompleteResponseDTO;
+import com.carlikeafriend_backend.backend.dto.SimpleResponseDTO;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.service.IJwtService;
 import com.carlikeafriend_backend.backend.service.IPermissionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,7 +48,8 @@ class PermissionControllerTest {
     private UserDetailsService userDetailsService;
 
     private PermissionDTO permissionDTO;
-    private PermissionResponseDTO permissionResponseDTO;
+    private PermissionCompleteResponseDTO permissionResponseDTO;
+    private SimpleResponseDTO simpleResponseDTO;
 
     @BeforeEach
     void setUp() {
@@ -55,13 +57,13 @@ class PermissionControllerTest {
         permissionDTO.setName("UPDATE_PRODUCT");
         permissionDTO.setDescription("Permite actualizar productos");
 
-        permissionResponseDTO = new PermissionResponseDTO(1L, "UPDATE_PRODUCT");
+        simpleResponseDTO = new SimpleResponseDTO(1L, "UPDATE_PRODUCT");
     }
 
     @Test
     @DisplayName("POST /permissions - Debería crear un permiso exitosamente")
     void testSavePermission_StatusCreated() throws Exception {
-        when(permissionService.savePermission(any(PermissionDTO.class))).thenReturn(permissionResponseDTO);
+        when(permissionService.savePermission(any(PermissionDTO.class))).thenReturn(simpleResponseDTO);
 
         mockMvc.perform(post("/carlikeafriend/permissions")
                         .with(csrf())
@@ -72,10 +74,23 @@ class PermissionControllerTest {
     }
 
     @Test
+    @DisplayName("POST /permissions - Retornar 409 Conflict si el nombre ya existe")
+    void testSavePermission_DuplicateName_StatusConflict() throws Exception {
+        when(permissionService.savePermission(any(PermissionDTO.class)))
+                .thenThrow(new DuplicateResourceException("Ya existe un permiso activo"));
+
+        mockMvc.perform(post("/carlikeafriend/permissions")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(permissionDTO)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     @DisplayName("GET /permissions - Debería retornar lista de permisos")
     void testFindAllPermissions_StatusOK() throws Exception {
-        PermissionResponseCompleteDTO completeDTO = new PermissionResponseCompleteDTO(1L, "UPDATE_PRODUCT", "Desc");
-        when(permissionService.findAllPermissions()).thenReturn(List.of(completeDTO));
+        PermissionCompleteResponseDTO completeDTO = new PermissionCompleteResponseDTO(1L, "UPDATE_PRODUCT", "Desc");
+        when(permissionService.getAllPermissions()).thenReturn(List.of(completeDTO));
 
         mockMvc.perform(get("/carlikeafriend/permissions"))
                 .andExpect(status().isOk())
@@ -85,7 +100,7 @@ class PermissionControllerTest {
     @Test
     @DisplayName("GET /permissions/{id} - Retornar 404 si no existe")
     void testFindPermissionById_StatusNotFound() throws Exception {
-        when(permissionService.findPermissionById(99L)).thenReturn(Optional.empty());
+        when(permissionService.getPermissionById(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/carlikeafriend/permissions/99"))
                 .andExpect(status().isNotFound());
@@ -94,7 +109,7 @@ class PermissionControllerTest {
     @Test
     @DisplayName("PUT /permissions/{id} - Debería actualizar el permiso")
     void testUpdatePermission_StatusOK() throws Exception {
-        when(permissionService.updatePermission(eq(1L), any(PermissionDTO.class))).thenReturn(permissionResponseDTO);
+        when(permissionService.updatePermission(eq(1L), any(PermissionDTO.class))).thenReturn(simpleResponseDTO);
 
         mockMvc.perform(put("/carlikeafriend/permissions/1")
                         .with(csrf())

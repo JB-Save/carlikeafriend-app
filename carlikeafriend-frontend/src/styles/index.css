@@ -1,7 +1,5 @@
 body {
     font-family: Arial, Helvetica, sans-serif;
-    /* Ajusta el padding superior del cuerpo para que el contenido no quede debajo del encabezado fijo */
-    padding-top: 120px;
     /* Un color de fondo suave general para el cuerpo */
     background-color: #f4f3f2;
     display: flex;

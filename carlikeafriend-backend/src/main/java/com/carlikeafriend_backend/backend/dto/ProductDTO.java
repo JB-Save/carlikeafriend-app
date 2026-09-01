@@ -1,31 +1,44 @@
 package com.carlikeafriend_backend.backend.dto;
 
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.util.HashSet;
 import java.util.Set;
 
 public class ProductDTO {
 
-    @NotBlank(message = "El Nombre no debe estar vacío")
-    @Size(min = 3, max = 100, message = "El nombre debe tener entre 3 y 100 caracteres")
+    @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 100, message = "El nombre no debe exceder los 100 caracteres")
     private String name;
 
-    @NotBlank(message = "La descripción no debe estar vacía")
-    @Size(min = 10, max = 800, message = "La descripción debe tener entre 10 y 800 caracteres")
+    @NotNull(message = "La marca es obligatoria")
+    private Long makeId;
+
+    @NotBlank(message = "La descripción es obligatoria")
+    @Size(max = 800, message = "La descripción no debe exceder los 800 caracteres")
     private String description;
 
-    @Min(value = 0, message = "El precio no debe ser negativo")
-    private double price;
+    @NotNull(message = "La capacidad de pasajeros es obligatorio")
+    @PositiveOrZero(message = "La capacidad de pasajeros no debe ser negativo")
+    private Integer passengerCapacity;
+
+    @NotNull(message = "La capacidad de equipaje es obligatorio")
+    @PositiveOrZero(message = "La capacidad de equipaje no debe ser negativo")
+    private Integer baggageCapacity;
+
+    @NotNull(message = "El número de puertas es obligatorio")
+    @PositiveOrZero(message = "El número de puertas no debe ser negativo")
+    private Integer numberOfDoors;
 
     private Set<Long> categoriesIds = new HashSet<>();
 
     private Set<Long> featuresIds = new HashSet<>();
 
+    private Set<Long> policiesIds = new HashSet<>();
+
     public ProductDTO() {
     }
+
 
     public String getName() {
         return name;
@@ -33,6 +46,14 @@ public class ProductDTO {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+   public Long getMakeId() {
+        return makeId;
+    }
+
+    public void setMakeId(Long makeId) {
+        this.makeId = makeId;
     }
 
     public String getDescription() {
@@ -43,12 +64,28 @@ public class ProductDTO {
         this.description = description;
     }
 
-    public double getPrice() {
-        return price;
+    public Integer getPassengerCapacity() {
+        return passengerCapacity;
     }
 
-    public void setPrice(double price) {
-        this.price = price;
+    public void setPassengerCapacity(Integer passengerCapacity) {
+        this.passengerCapacity = passengerCapacity;
+    }
+
+    public Integer getBaggageCapacity() {
+        return baggageCapacity;
+    }
+
+    public void setBaggageCapacity(Integer baggageCapacity) {
+        this.baggageCapacity = baggageCapacity;
+    }
+
+    public Integer getNumberOfDoors() {
+        return numberOfDoors;
+    }
+
+    public void setNumberOfDoors(Integer numberOfDoors) {
+        this.numberOfDoors = numberOfDoors;
     }
 
     public Set<Long> getCategories() {
@@ -65,5 +102,13 @@ public class ProductDTO {
 
     public void setFeatures(Set<Long> featuresIds) {
         this.featuresIds = featuresIds;
+    }
+
+    public Set<Long> getPolicies() {
+        return policiesIds;
+    }
+
+    public void setPolicies(Set<Long> policiesIds) {
+        this.policiesIds = policiesIds;
     }
 }

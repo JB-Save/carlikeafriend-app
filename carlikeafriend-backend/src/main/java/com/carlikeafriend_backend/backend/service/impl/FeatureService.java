@@ -4,19 +4,21 @@ import com.carlikeafriend_backend.backend.dto.*;
 import com.carlikeafriend_backend.backend.entity.Feature;
 import com.carlikeafriend_backend.backend.entity.Icon;
 import com.carlikeafriend_backend.backend.event.ImageDeletedEvent;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.exception.ImageLimitExceededException;
 import com.carlikeafriend_backend.backend.exception.InvalidFileExtensionException;
 import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.repository.IFeatureIconRepository;
 import com.carlikeafriend_backend.backend.repository.IFeatureRepository;
 import com.carlikeafriend_backend.backend.service.IFeatureService;
 import com.carlikeafriend_backend.backend.service.IFileStorageService;
 import com.carlikeafriend_backend.backend.util.FileValidationUtils;
+import com.carlikeafriend_backend.backend.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -53,14 +55,16 @@ public class FeatureService implements IFeatureService {
     @Override
     @Transactional
     public FeatureResponseDTO saveFeature(FeatureDTO featureDTO, MultipartFile imageFile) throws
-            UniqueNameException, ImageLimitExceededException, InvalidFileExtensionException, IOException {
+            DuplicateResourceException, ImageLimitExceededException, InvalidFileExtensionException, IOException {
 
-        logger.info("Intentando guardar nueva característica: {}", featureDTO.getName());
+        String featureName = StringUtils.capitalize(featureDTO.getName());
+
+        logger.info("Intentando guardar nueva característica: {}", featureName);
 
         // Validación de duplicados por nombre
-        if (featureRepository.existsByName(featureDTO.getName())) {
-            logger.warn("El nombre de la característica ya existe: {}", featureDTO.getName());
-            throw new UniqueNameException("El nombre de la caraterística ya existe.");
+        if (featureRepository.existsByNameAndDeletedFalse(featureName)) {
+            logger.warn("Ya existe una característica activa con el nombre: {}", featureName);
+            throw new DuplicateResourceException("Ya existe una característica activa con el nombre: " + featureName);
         }
 
         // Validación de archivos usando la utilidad
@@ -69,7 +73,7 @@ public class FeatureService implements IFeatureService {
 
         // Mapear DTO a Entidad
         Feature feature = new Feature();
-        feature.setName(featureDTO.getName());
+        feature.setName(featureName);
 
         // Procesar Imagen
         if (imageFile.getSize() > 0 && !imageFile.isEmpty()) {
@@ -83,45 +87,48 @@ public class FeatureService implements IFeatureService {
 
         Feature savedFeature = featureRepository.save(feature);
         logger.info("Característica guardada exitosamente con ID: {}", savedFeature.getId());
-        return convertToDto(savedFeature);
+        return mapToFeatureDto(savedFeature);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<FeatureResponseDTO> findAllFeatures() {
+    public List<FeatureResponseDTO> getAllFeatures() {
         logger.info("Buscando todas las características.");
-        return featureRepository.findAll().stream()
-                .map(this::convertToDto)
+        return featureRepository.findAllByDeletedFalse().stream()
+                .map(this::mapToFeatureDto)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<FeatureResponseDTO> findFeatureById(Long id) {
+    public Optional<FeatureResponseDTO> getFeatureById(Long id) {
         logger.info("Buscando característica con ID: {}", id);
-        return featureRepository.findById(id)
-                .map(this::convertToDto);
+        return featureRepository.findByIdAndDeletedFalse(id)
+                .map(this::mapToFeatureDto);
     }
 
     @Override
     @Transactional
-    public FeatureResponseDTO updateFeature(Long id, FeatureDTO featureDTO, MultipartFile newImageFile) throws UniqueNameException, InvalidFileExtensionException, IOException {
+    public FeatureResponseDTO updateFeature(Long id, FeatureDTO featureDTO, MultipartFile newImageFile) throws DuplicateResourceException, InvalidFileExtensionException, IOException {
 
         logger.info("Intentando actualizar característica con ID: {}", id);
 
-        Feature existingFeature = featureRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Característica no encontrada con ID: " + id));
+        String featureName = StringUtils.capitalize(featureDTO.getName());
+
+        Feature existingFeature = featureRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new ResourceNotFoundException("No se puede actualizar: Característica no encontrada con ID: " + id));
 
         // Validar que el nombre de la característica sea único, excluyendo la característica actual
-        if (featureDTO.getName() != null && !featureDTO.getName().equals(existingFeature.getName()) && featureRepository.existsByNameAndIdNot(featureDTO.getName(), id)) {
-            throw new UniqueNameException("El nombre de la característica ya existe.");
+        if (featureName != null && !featureName.equals(StringUtils.capitalize(existingFeature.getName()))) {
+            if (featureRepository.existsByNameAndIdNotAndDeletedFalse(featureName, id)) {
+                throw new DuplicateResourceException("El nombre " + featureName + " ya está en uso por otra característica activa.");
+            }
+            // Actualizar datos básicos de la característica
+            existingFeature.setName(featureName);
         }
 
-        // Actualizar datos básicos de la característica
-        Optional.ofNullable(featureDTO.getName()).ifPresent(existingFeature::setName);
-
         // Validación de nueva imagen
-        if (newImageFile != null) {
+        if (newImageFile != null && !newImageFile.isEmpty()) {
             fileValidationUtils.validateImageFile(newImageFile);
 
             // Eliminar la imagen antigua si existe
@@ -139,22 +146,37 @@ public class FeatureService implements IFeatureService {
         }
 
         Feature updatedFeature = featureRepository.save(existingFeature);
-        return convertToDto(updatedFeature);
+        return mapToFeatureDto(updatedFeature);
 
     }
 
     @Override
     @Transactional
-    public void deleteFeature(Long id) throws IOException {
-        Feature feature = featureRepository.findById(id)
+    public void deleteFeature(Long id) {
+        Feature feature = featureRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Característica no encontrada con ID: " + id));
+
+        if (feature.hasActiveProducts()) {
+            throw new DataIntegrityViolationException("No se puede eliminar: Existen productos activos asociados a esta característica.");
+        }
+
+        // Liberar el nombre único para futuras creaciones
+        String timestamp = String.valueOf(System.currentTimeMillis());
+        feature.setName(feature.getName() + "_DELETED_" + timestamp);
+
+        // Borrado lógico
+        feature.setDeleted(true);
+
+        featureRepository.save(feature);
+        logger.info("Característica con ID: {} borrada lógicamente.", id);
+/*
+        // --- PROTECCIÓN DE INTEGRIDAD (RESTRICTIVO) ---
+        validateEmpty(feature.getProducts(), "productos", id);
 
         // Guardar la ruta temporalmente
         String pathToDelete = (feature.getIcon() != null) ? feature.getIcon().getImagePath() : null;
 
         // Intentar borrar de la DB.
-        // Si hay una FK Constraint (DataIntegrityViolationException), explota aquí
-        // y NUNCA llega a la línea del evento.
         featureRepository.delete(feature);
 
         // Si llegamos aquí, la DB aceptó la orden (aunque aún no ha hecho commit).
@@ -163,6 +185,8 @@ public class FeatureService implements IFeatureService {
             eventPublisher.publishEvent(new ImageDeletedEvent(pathToDelete));
         }
         logger.warn("Característica marcada para eliminación con ID: {}", id);
+
+ */
     }
 
     @Override
@@ -172,8 +196,7 @@ public class FeatureService implements IFeatureService {
                 .orElseThrow(() -> new ResourceNotFoundException("Ruta de imagen no encontrada"));
     }
 
-
-    private FeatureResponseDTO convertToDto(Feature feature) {
+    private FeatureResponseDTO mapToFeatureDto(Feature feature) {
         ImageDTO featureIconDto = null;
         if (feature.getIcon() != null) {
             featureIconDto = new ImageDTO();

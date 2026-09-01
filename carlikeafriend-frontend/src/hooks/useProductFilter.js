@@ -1,139 +1,350 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useFetch } from './useFetch';
-import { useLocation } from 'react-router-dom';
+import { useCallback, useEffect, useState, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom';
 import { useDebounce } from './useDebounce';
 import { extractErrorMessage } from '../utils/extractErrorMessage';
+import { calculateDynamicPrice, fetchFinancialData, calculateSliderLimitsPrice } from '../hooks/usePricing';
+import { useBooking } from '../context/BookingContext';
+import { validateAndCorrectBookingDates } from '../utils/dateHelpers';
+import { format } from 'date-fns';
 import { API_CONFIG } from '../config/apiConfig';
 
 export const useProductFilter = () => {
 
-  const location = useLocation(); // Este hook te da acceso al objeto location, que contiene la URL actual y, lo más importante, el estado de navegación en location.state.
+  const { bookingData, updateBookingData } = useBooking();
+
+  const [searchParams, setSearchParams] = useSearchParams();
   const [allCategories, setAllCategories] = useState([]);
   const [allFeatures, setAllFeatures] = useState([]);
+  const [citiesWithBranches, setCitiesWithBranches] = useState([]);
+
   const [products, setProducts] = useState([]);
   const [productError, setproductError] = useState(null);
   const [isLoadingProduct, setIsLoadingProduct] = useState(false);
-  const [selectDefaultOption, setSelectDefaultOption] = useState('price_asc');
+
+  const [selectedPickupBranchName, setSelectedPickupBranchName] = useState(null);
+  const [hasSearched, setHasSearched] = useState(false);
+
+  const [financialConfig, setFinancialConfig] = useState(null);
+  const [transferFees, setTransferFees] = useState(null);
+  const [financialError, setFinancialError] = useState(null);
+
+  // Sincronización del ordenamiento inicial con la URL
+  const [selectDefaultOption, setSelectDefaultOption] = useState(() => searchParams.get('sortBy') || 'price_asc');
 
   //Estados de carga categorías
-  const { data: categoryData, isLoading: isLoadingCategory, error: catError, fetchData: useFetchCategory } = useFetch();
+  const [isLoadingCategory, setIsLoadingCategory] = useState(true);
   const [categoryError, setCategoryError] = useState(null);
-  const CATEGORIES_URL = API_CONFIG.CATEGORIES;
 
   //Estados de carga características
-  const { data: featureData, isLoading: isLoadingFeature, error: featError, fetchData: useFetchFeature } = useFetch();
+  const [isLoadingFeature, setIsLoadingFeature] = useState(true);
   const [featureError, setFeatureError] = useState(null);
-  const FEATURES_URL = API_CONFIG.FEATURES;
+
+  //Estados de carga ciudades con sucursales
+  const [isLoadingCityWithBranch, setIsLoadingCityWithBranch] = useState(true);
+  const [cityWithBranchError, setCityWithBranchError] = useState(null);
+  
+
+  // Topes base del catálogo desde el Backend (Tarifa de 1 día)
+  const [baseCatalogLimits, setBaseCatalogLimits] = useState({ min: 0, max: 0 });
 
   // Usamos useState en lugar de useMemo para que no se recalculen (encojan) al filtrar
   const [absoluteMinPrice, setAbsoluteMinPrice] = useState(0);
   const [absoluteMaxPrice, setAbsoluteMaxPrice] = useState(0);
 
-  // Actualización del rango mínimo y máximo
-  useEffect(() => {
-    if (!products || products.length === 0) return;
-
-    const prices = products.map(product => product.price);
-    const batchMin = Math.min(...prices);
-    const batchMax = Math.max(...prices);
-    const roundMax = Math.ceil(batchMax / 10000) * 10000; // Redondeo UX
-
-    // Actualizar MÍNIMO solo si encontramos un precio más bajo que el histórico (o si es la primera carga)
-    setAbsoluteMinPrice(prev => {
-      if (prev === 0) return batchMin; // Primera carga
-      return batchMin < prev ? batchMin : prev; // Solo bajamos, nunca subimos el mínimo
-    });
-
-    // Actualizar MÁXIMO solo si encontramos un precio más alto que el histórico
-    setAbsoluteMaxPrice(prev => {
-      if (prev === 0) return roundMax; // Primera carga
-      return roundMax > prev ? roundMax : prev; // Solo subimos, nunca bajamos el máximo
-    });
-
-  }, [products]);
-
-  //Estado de los filtros seleccionados
-  const [filteredProductsState, setFilteredProductsState] = useState({
-    categories: [],
-    features: [],
-    minPrice: 0,
-    maxPrice: 0,
-    sortBy: ''
+  // Inicialización del estado de filtros desde los parámetros de la URL
+  const [filteredProductsState, setFilteredProductsState] = useState(() => {
+    return {
+      categories: searchParams.get('categories') ? searchParams.get('categories').split(',').map(Number) : [],
+      features: searchParams.get('features') ? searchParams.get('features').split(',').map(Number) : [],
+      minPrice: searchParams.get('minPrice') ? Number(searchParams.get('minPrice')) : 0,
+      maxPrice: searchParams.get('maxPrice') ? Number(searchParams.get('maxPrice')) : 0,
+      sortBy: searchParams.get('sortBy') || 'price_asc'
+    };
   });
 
-  // Si el usuario tiene el filtro en 0 (ej. reset o navegación), lo visualizamos con los valores absolutos
+  // Efecto para actualizar la URL cada vez que el estado de los filtros cambie
   useEffect(() => {
-    if (absoluteMaxPrice > 0) {
+    const params = new URLSearchParams();
+    if (filteredProductsState.categories.length > 0) params.set('categories', filteredProductsState.categories.join(','));
+    if (filteredProductsState.features.length > 0) params.set('features', filteredProductsState.features.join(','));
+    if (filteredProductsState.minPrice > 0) params.set('minPrice', filteredProductsState.minPrice.toString());
+    if (filteredProductsState.maxPrice > 0) params.set('maxPrice', filteredProductsState.maxPrice.toString());
+    if (filteredProductsState.sortBy) params.set('sortBy', filteredProductsState.sortBy);
+
+    // replace: true evita que cada cambio de filtro genere una entrada nueva en el historial del botón "atrás"
+    setSearchParams(params, { replace: true });
+  }, [filteredProductsState, setSearchParams]);
+
+  // Guardamos las condiciones anteriores para compararlas
+  const prevBookingState = useRef({
+    pickup: bookingData?.pickupBranch?.id,
+    return: bookingData?.returnBranch?.id,
+    start: bookingData?.dateRange?.[0]?.getTime(),
+    end: bookingData?.dateRange?.[1]?.getTime()
+  });
+
+  // DETECTOR DE CAMBIOS Y CALCULADOR DE LÍMITES COMBINADO
+  // Calcula los topes absolutos del Slider y actualiza los filtros instantáneamente sin depender del ciclo de renderizado.
+  useEffect(() => {
+    if (!baseCatalogLimits || baseCatalogLimits.max === 0) return;
+
+    // 1. Extraer fechas y calcular límites efectivos (Escalado de precios)
+    let pickupDate = null;
+    let returnDate = null;
+    if (bookingData?.dateRange?.[0] && bookingData?.dateRange?.[1]) {
+      // CLONAMOS los objetos Date antes de usar setHours para evitar MUTAR el Contexto Global
+      pickupDate = new Date(bookingData.dateRange[0]);
+      returnDate = new Date(bookingData.dateRange[1]);
+      // Aplicar las horas seleccionadas para precisión
+      if (bookingData.pickupTime) {
+        pickupDate.setHours(bookingData.pickupTime.getHours(), bookingData.pickupTime.getMinutes(), 0, 0);
+      }
+      if (bookingData.returnTime) {
+        returnDate.setHours(bookingData.returnTime.getHours(), bookingData.returnTime.getMinutes(), 0, 0);
+      }
+    }
+
+    let minEffective = baseCatalogLimits.min;
+    let maxEffective = baseCatalogLimits.max;
+
+    // Si hay fechas y config, escalamos los topes a "Presupuesto Total"
+    if (pickupDate && returnDate && financialConfig) {
+      minEffective = calculateSliderLimitsPrice(
+        baseCatalogLimits.min,
+        pickupDate,
+        returnDate,
+        bookingData?.pickupBranch?.id,
+        bookingData?.returnBranch?.id,
+        financialConfig,
+        transferFees
+      );
+
+      maxEffective = calculateSliderLimitsPrice(
+        baseCatalogLimits.max,
+        pickupDate,
+        returnDate,
+        bookingData?.pickupBranch?.id,
+        bookingData?.returnBranch?.id,
+        financialConfig,
+        transferFees
+      );
+    }
+
+    // 2. REDONDEO MATEMÁTICO PERFECTO:
+    // Forzamos a que el límite inferior sea un múltiplo exacto de 10.000 hacia abajo.
+    // Esto garantiza que el <input type="range" step="10000"> no se rompa ni pierda valores.
+    const roundMin = Math.floor(minEffective / 10000) * 10000;
+    const roundMax = Math.ceil(maxEffective / 10000) * 10000;
+
+    const newAbsMin = roundMin >= roundMax ? Math.max(0, roundMin - 10000) : roundMin;
+    const newAbsMax = roundMin >= roundMax ? roundMax + 10000 : roundMax;
+
+    setAbsoluteMinPrice(newAbsMin);
+    setAbsoluteMaxPrice(newAbsMax);
+
+    // 3. SINCRONIZACIÓN CON LOS FILTROS (Solución al fallo de los ceros)
+    const currentPickup = bookingData?.pickupBranch?.id;
+    const currentReturn = bookingData?.returnBranch?.id;
+    const currentStart = bookingData?.dateRange?.[0]?.getTime();
+    const currentEnd = bookingData?.dateRange?.[1]?.getTime();
+    const prev = prevBookingState.current;
+
+    // Si cambió alguna sucursal o las fechas (los días totales cambian)
+    const isSearchContextChanged = (
+      currentPickup !== prev.pickup ||
+      currentReturn !== prev.return ||
+      currentStart !== prev.start ||
+      currentEnd !== prev.end
+    );
+
+
+    if (isSearchContextChanged) {
+      // Si el usuario cambió la búsqueda, RESETEAMOS los sliders al nuevo rango total seguro (evitamos el 0).
+      prevBookingState.current = {
+        pickup: currentPickup, return: currentReturn, start: currentStart, end: currentEnd
+      };
+
+      setFilteredProductsState(prevState => ({
+        ...prevState,
+        minPrice: newAbsMin,
+        maxPrice: newAbsMax
+      }));
+    } else {
+      // Corrección de seguridad rutinaria (ej. si era 0 al cargar por primera vez o quedó fuera de límites)
       setFilteredProductsState(prevState => {
-        // Si el maxPrice es 0, significa que no hay filtro activo, así que adoptamos el rango total
-        if (prevState.maxPrice === 0) {
-          return {
-            ...prevState,
-            minPrice: absoluteMinPrice,
-            maxPrice: absoluteMaxPrice,
-          };
+        let changed = false;
+        let newMin = prevState.minPrice;
+        let newMax = prevState.maxPrice;
+
+        // Si es 0 o está fuera del nuevo límite calculado, forzamos corrección
+        if (newMax === 0 || newMax > newAbsMax || newMax < newAbsMin) {
+          newMax = newAbsMax;
+          changed = true;
         }
-        return prevState;
+        if (newMin === 0 || newMin < newAbsMin || newMin > newAbsMax) {
+          newMin = newAbsMin;
+          changed = true;
+        }
+
+        // Corrección de seguridad en caso de cruce
+        if (newMin > newMax) {
+          newMin = newAbsMin;
+          newMax = newAbsMax;
+          changed = true;
+        }
+
+        return changed ? {
+          ...prevState,
+          minPrice: newMin,
+          maxPrice: newMax,
+        } : prevState;
       });
     }
-  }, [absoluteMinPrice, absoluteMaxPrice]);
+  }, [baseCatalogLimits, bookingData, financialConfig, transferFees]);
 
   // Usamos useDebounce para retrasar la llamada a la API y no saturarla
   const debouncedFilters = useDebounce(filteredProductsState, 500); // Espera 500ms
 
-  const PRODUCT_FILTER_URL = API_CONFIG.FILTER;
-
-  //Manejo de navegación desde otras páginas (ej. Home -> click en categoría)
+  // Carga inicial de los datos
   useEffect(() => {
-    // Accede a los datos del estado de la navegación
-    if (location.state && location.state.filterCategoryId) { // Verificamos si existe el estado de navegación y si contiene la propiedad filterCategoryId
-      //setActiveDefaultCategory(location.state.filterCategoryId); // actualizamos el estado local con los datos
-      setFilteredProductsState({
-        categories: [location.state.filterCategoryId],
-        features: [],
-        minPrice: 0,
-        maxPrice: 0,
-        sortBy: ''
-      });
-    }
-  }, [location]);
+    const loadInitialData = async () => {
+      // 1. Iniciamos estados de carga y reseteamos errores
+      setIsLoadingCategory(true);
+      setIsLoadingFeature(true);
+      setIsLoadingCityWithBranch(true);
+      setCategoryError(null);
+      setFeatureError(null);
+      setCityWithBranchError(null);
+      setFinancialError(null);
 
+      try {
+        // 2. Lanzamos las peticiones en paralelo
+        const catalogsPromise = Promise.all([
+          fetch(API_CONFIG.CATEGORIES, { method: 'GET' }),
+          fetch(API_CONFIG.FEATURES, { method: 'GET' }),
+          fetch(API_CONFIG.CITIES_WITH_BRANCHES, { method: 'GET' }),
+          fetch(API_CONFIG.PRODUCT_PRICE_RANGE, { method: 'GET' })
+        ]);
 
-  // Carga inicial de los datos de categorías y características.
-  useEffect(() => {
-    useFetchCategory(CATEGORIES_URL, 'GET');
-    useFetchFeature(FEATURES_URL, 'GET')
+        // 3. Disparamos la petición financiera usando el Singleton (Caché)
+        // Esto NO hará peticiones a la red si usePricing ya lo hizo primero (o viceversa)
+        const financialPromise = fetchFinancialData();
+
+        // Esperamos ambas
+        const [[resCat, resFeat, resCity, resPriceRange], { config, fees }] = await Promise.all([
+          catalogsPromise,
+          financialPromise
+        ]);
+
+        // 4. Seteamos los datos financieros en el estado
+        setFinancialConfig(config);
+        setTransferFees(fees);
+
+        // Procesar Rango de Precios 
+        if (resPriceRange.ok) {
+          const rangeData = await resPriceRange.json();
+          setBaseCatalogLimits({ min: rangeData.minPrice, max: rangeData.maxPrice });
+        }
+
+        // 5. Procesar Categorías
+        if (resCat.ok) {
+          const catData = await resCat.json();
+          setAllCategories(catData);
+        } else {
+          // Integración de extractErrorMessage para errores del servidor (400, 500, etc.)
+          const catMsg = await extractErrorMessage(resCat);
+          setCategoryError(catMsg);
+        }
+
+        // 6. Procesar Características
+        if (resFeat.ok) {
+          const featData = await resFeat.json();
+          setAllFeatures(featData);
+        } else {
+          const featMsg = await extractErrorMessage(resFeat);
+          setFeatureError(featMsg);
+        }
+
+        // 7. Procesar Ciudades/Sucursales
+        if (resCity.ok) {
+          const cityData = await resCity.json();
+          setCitiesWithBranches(cityData);
+        } else {
+          const cityMsg = await extractErrorMessage(resCity);
+          setCityWithBranchError(cityMsg);
+        }
+
+      } catch (error) {
+        console.error("Error de red en carga inicial:", error);
+        // Errores de conexión (cuando no hay respuesta del servidor)
+        const networkMsg = "No se pudo establecer conexión con el servidor.";
+        setCategoryError(networkMsg);
+        setFeatureError(networkMsg);
+        setCityError(networkMsg);
+        // Asignamos un mensaje específico para la parte financiera
+        setFinancialError("El cálculo dinámico no está disponible temporalmente. Mostrando tarifas base.");
+      } finally {
+        setIsLoadingCategory(false);
+        setIsLoadingFeature(false);
+        setIsLoadingCityWithBranch(false);
+      }
+    };
+
+    loadInitialData();
   }, []);
 
 
-  // Procesa los datos una vez que han sido recibidos.
-  useEffect(() => {
-    if (categoryData) {
-      setAllCategories(categoryData);
-    } else if (catError) {
-      console.error(catError);
-      setCategoryError(catError.message || "Ocurrió un error inesperado");
-    }
-
-    if (featureData) {
-      setAllFeatures(featureData);
-    } else if (featError) {
-      console.error(featError);
-      setFeatureError(featError.message || "Ocurrió un error inesperado");
-    }
-
-  }, [categoryData, featureData, catError, featError]);
-
   //Lógica de filtrado de productos
   useEffect(() => {
-    setIsLoadingProduct(false);
-    setproductError(null);
-
     const fetchProducts = async () => {
       setIsLoadingProduct(true);
+      setproductError(null);
 
       //Mapeo de parámetros para Spring Boot
       const apiFilters = {};
+
+      // Inyectar datos de búsqueda del formulario global
+      if (bookingData.pickupBranch && bookingData.dateRange && bookingData.dateRange[0] && bookingData.dateRange[1]) {
+
+        apiFilters.branchId = bookingData.pickupBranch.id;
+
+        // Enviar la sucursal de entrega si el switch está encendido
+        if (bookingData.differentReturnBranch && bookingData.returnBranch) {
+          apiFilters.returnBranchId = bookingData.returnBranch.id;
+        }
+
+        // --- ARQUITECTURA DE CORRECCIÓN ---
+        // Verificamos y corregimos silenciosamente si la fecha quedó en el pasado.
+        const corrections = validateAndCorrectBookingDates(
+          bookingData.dateRange,
+          bookingData.pickupTime,
+          bookingData.returnTime
+        );
+
+        let fetchDateRange = bookingData.dateRange;
+        let fetchPickupTime = bookingData.pickupTime;
+        let fetchReturnTime = bookingData.returnTime;
+
+        if (corrections) {
+          // Usar las fechas corregidas para la petición
+          fetchDateRange = corrections.dateRange;
+          fetchPickupTime = corrections.pickupTime;
+          fetchReturnTime = corrections.returnTime;
+
+          // Sincronizamos el Contexto para que el UI se actualice
+          updateBookingData(corrections);
+        }
+
+        const pickupDateStr = format(fetchDateRange[0], 'yyyy-MM-dd');
+        const returnDateStr = format(fetchDateRange[1], 'yyyy-MM-dd');
+        const pickupTimeStr = format(fetchPickupTime, 'HH:mm:ss');
+        const returnTimeStr = format(fetchReturnTime, 'HH:mm:ss');
+
+        apiFilters.pickupDate = `${pickupDateStr}T${pickupTimeStr}`;
+        apiFilters.returnDate = `${returnDateStr}T${returnTimeStr}`;
+        setHasSearched(true);
+        setSelectedPickupBranchName(bookingData.pickupBranch);
+      }
 
       // Mapeamos 'categories' (React) a 'categoryIds' (Spring Boot @RequestParam)
       if (debouncedFilters.categories && debouncedFilters.categories.length > 0) {
@@ -164,10 +375,8 @@ export const useProductFilter = () => {
         }
       });
 
-      const URL = `${PRODUCT_FILTER_URL}?${params.toString()}`;
-
       try {
-        const response = await fetch(URL, {
+        const response = await fetch(`${API_CONFIG.FILTERS}?${params.toString()}`, {
           method: 'GET',
         });
 
@@ -180,13 +389,14 @@ export const useProductFilter = () => {
         }
       } catch (error) {
         console.error("Error al obtener productos: ", error);
-        setproductError(error.message || "Ocurrió un error inesperado.");
+        const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+        setproductError(message || "Ocurrió un error inesperado.");
       } finally {
         setIsLoadingProduct(false);
       }
     }
     fetchProducts();
-  }, [debouncedFilters]); // Solo se ejecuta cuando los filtros "debounced" cambian
+  }, [debouncedFilters]); // Quitamos bookingData explícitamente para evitar ciclos infinitos causados por el updateBookingData
 
 
   // Handler universal para checklists y quick tabs
@@ -250,7 +460,7 @@ export const useProductFilter = () => {
       features: [],
       minPrice: absoluteMinPrice,
       maxPrice: absoluteMaxPrice,
-      sortBy: ''
+      sortBy: 'price_asc'
     });
     setSelectDefaultOption('price_asc');
   }, [absoluteMinPrice, absoluteMaxPrice]);
@@ -258,6 +468,7 @@ export const useProductFilter = () => {
   return {
     allCategories,
     allFeatures,
+    citiesWithBranches,
     isLoadingCategory,
     categoryError,
     isLoadingFeature,
@@ -268,7 +479,10 @@ export const useProductFilter = () => {
     filteredProducts: filteredProductsState,
     absoluteMinPrice, // Exportar el rango absoluto
     absoluteMaxPrice, // Exportar el rango absoluto
+    financialError,
     selectDefaultOption,
+    selectedPickupBranchName,
+    hasSearched,
     resetFilters,
     handleCheckListChange,
     handlePriceChange,

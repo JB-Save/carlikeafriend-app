@@ -3,6 +3,8 @@ package com.carlikeafriend_backend.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.Objects;
+
 @Entity
 @Table(name = "image")
 public class ProductImage {
@@ -16,7 +18,8 @@ public class ProductImage {
 
     @ManyToOne(fetch = FetchType.LAZY) // Muchas imágenes pueden pertenecer a un producto
     @JoinColumn(name = "product_id", nullable = false) // Columna en la tabla Imagen que referencia a Producto
-    @JsonIgnore // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
+    @JsonIgnore
+    // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
     private Product product;
 
     public ProductImage() {
@@ -60,5 +63,23 @@ public class ProductImage {
 
     public void setProduct(Product product) {
         this.product = product;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof ProductImage that)) return false;
+
+       if (this.id == null || that.getId() == null) {
+            return false;
+        }
+
+        return Objects.equals(this.id, that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

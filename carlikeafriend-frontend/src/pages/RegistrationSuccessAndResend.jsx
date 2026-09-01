@@ -42,7 +42,7 @@ export const RegistrationSuccessAndResend = () => {
                     disabled={isDisabled}
                 >
                     {status === 'resend_loading' && (
-                        <span className="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                     )}
                     {buttonText}
                 </button>

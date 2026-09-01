@@ -28,12 +28,12 @@ export const AddCategoryComponent = () => {
 
   return (
 
-    <div col="row">
-      <div className="col-12 col-md-8 mx-auto">
-        <div className="card card-shadow card-background p-4">
-          <h1 className="fs-3 fw-bold text-center form-title mb-4">
-            {categoryToEdit ? 'Editar Categoría' : 'Crear Categoría'}
-          </h1>
+    <div className="row">
+      <div className="col-12 col-md-10 mx-auto">
+        <div className="card custom-card-shadow custom-card-background p-4 p-md-5">
+          <h4 className="fw-bold text-center form-title mb-4">
+            {categoryToEdit ? 'Edición de Categoría' : 'Registro de Nueva Categoría'}
+          </h4>
           <CategoryForm
             categoryToEdit={categoryToEdit}
             onCategorySaved={handleCategorySaved}

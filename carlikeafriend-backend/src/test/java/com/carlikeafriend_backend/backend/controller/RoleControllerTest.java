@@ -1,8 +1,9 @@
 package com.carlikeafriend_backend.backend.controller;
 
+import com.carlikeafriend_backend.backend.dto.RoleCompleteResponseDTO;
 import com.carlikeafriend_backend.backend.dto.RoleDTO;
-import com.carlikeafriend_backend.backend.dto.RoleResponseCompleteDTO;
-import com.carlikeafriend_backend.backend.dto.RoleResponseDTO;
+import com.carlikeafriend_backend.backend.dto.SimpleResponseDTO;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.service.IJwtService;
 import com.carlikeafriend_backend.backend.service.IRoleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -46,10 +47,10 @@ class RoleControllerTest {
 
     @MockitoBean
     private UserDetailsService userDetailsService;
-    // ---------------------------------------------------------------------
 
     private RoleDTO roleDTO;
-    private RoleResponseDTO roleResponseDTO;
+    private SimpleResponseDTO roleResponseDTO;
+    private RoleCompleteResponseDTO roleCompleteResponseDTO;
 
     @BeforeEach
     void setUp() {
@@ -57,7 +58,8 @@ class RoleControllerTest {
         roleDTO.setName("EDITOR");
         roleDTO.setDescription("Puede editar contenido");
 
-        roleResponseDTO = new RoleResponseDTO(1L, "EDITOR");
+        roleResponseDTO = new SimpleResponseDTO(1L, "EDITOR");
+        roleCompleteResponseDTO = new RoleCompleteResponseDTO(1L, "EDITOR", "Desc", List.of());
     }
 
     @Test
@@ -74,10 +76,22 @@ class RoleControllerTest {
     }
 
     @Test
+    @DisplayName("POST /roles - Retornar 409 Conflict si el rol ya existe")
+    void testSaveRole_DuplicateName_StatusConflict() throws Exception {
+        when(roleService.saveRole(any(RoleDTO.class)))
+                .thenThrow(new DuplicateResourceException("Ya existe un rol activo"));
+
+        mockMvc.perform(post("/carlikeafriend/roles")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(roleDTO)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     @DisplayName("GET /roles - Debería retornar lista de roles")
     void testFindAllRoles_StatusOK() throws Exception {
-        RoleResponseCompleteDTO completeDTO = new RoleResponseCompleteDTO(1L, "EDITOR", "Desc", List.of());
-        when(roleService.findAllRoles()).thenReturn(List.of(completeDTO));
+        when(roleService.getAllRoles()).thenReturn(List.of(roleCompleteResponseDTO));
 
         mockMvc.perform(get("/carlikeafriend/roles"))
                 .andExpect(status().isOk())
@@ -85,8 +99,9 @@ class RoleControllerTest {
     }
 
     @Test
+    @DisplayName("GET /roles/{id} - Retornar 404 si no existe")
     void testFindRoleById_StatusNotFound() throws Exception {
-        when(roleService.findRoleById(99L)).thenReturn(Optional.empty());
+        when(roleService.getRoleById(99L)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/carlikeafriend/roles/99"))
                 .andExpect(status().isNotFound());

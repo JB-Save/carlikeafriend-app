@@ -1,13 +1,15 @@
 package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.*;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
+import com.carlikeafriend_backend.backend.entity.User;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.service.IUserService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,25 +31,51 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserResponseCompleteDTO>> findAllUsers() {
-        return new ResponseEntity<>(userService.findAllUsers(), HttpStatus.OK);
+    public ResponseEntity<List<UserCompleteResponseDTO>> findAllUsers() {
+        return new ResponseEntity<>(userService.getAllUsers(), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponseCompleteDTO> findById(@PathVariable Long id) {
-        Optional<UserResponseCompleteDTO> userDTO = userService.findById(id);
+    public ResponseEntity<UserCompleteResponseDTO> getUserById(@PathVariable Long id) {
+        Optional<UserCompleteResponseDTO> userDTO = userService.getUserById(id);
         return userDTO.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
 
     @PutMapping("/{id}")
     //@PatchMapping("/{id}")
-    public ResponseEntity<UserResponseDTO> updateUserFromAdmin(
+    public ResponseEntity<UserAuthenticationResponseDTO> updateUserFromAdmin(
             @PathVariable Long id,
-            @RequestBody @Valid UserDTO userDTO) throws UniqueNameException {
+            @RequestBody @Valid UserDTO userDTO) throws DuplicateResourceException {
 
-        UserResponseDTO updatedUser = userService.updateUserFromAdmin(id, userDTO);
+        UserAuthenticationResponseDTO updatedUser = userService.updateUserFromAdmin(id, userDTO);
         return new ResponseEntity<>(updatedUser, HttpStatus.OK);
+    }
+
+    @PutMapping("/account")
+    public ResponseEntity<UserResponseDTO> updateMyProfile(
+            @AuthenticationPrincipal User currentUser,
+            @RequestBody @Valid UserProfileDTO profileDTO) {
+
+        UserResponseDTO updatedProfile = userService.updateUserProfile(currentUser.getId(), profileDTO);
+        return new ResponseEntity<>(updatedProfile, HttpStatus.OK);
+    }
+
+    @GetMapping("/account")
+    public ResponseEntity<UserProfileResponseDTO> getUserProfileById( @AuthenticationPrincipal User currentUser) {
+        Optional<UserProfileResponseDTO> userProfileDTO = userService.getUserProfileById(currentUser.getId());
+        return userProfileDTO.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
+                .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
+    }
+
+    @DeleteMapping("/account/me/deactivate")
+    public ResponseEntity<Map<String, String>> deactivateMyAccount(@AuthenticationPrincipal User currentUser) {
+
+        // Llamamos al método con las reglas de negocio
+        userService.deleteUser(currentUser.getId());
+
+        // Devolvemos una respuesta exitosa
+        return ResponseEntity.ok(Map.of("message", "Tu cuenta ha sido desactivada y tus datos han sido procesados correctamente."));
     }
 
     @DeleteMapping("/{id}")

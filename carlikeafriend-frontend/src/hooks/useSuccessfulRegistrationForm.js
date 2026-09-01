@@ -50,7 +50,7 @@ export const useSuccessfulRegistrationForm = () => {
             const response = await fetch(RESEND_ENDPOINT, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json; charset=UTF-8',
+                    'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({ email: email }),
             });
@@ -68,8 +68,9 @@ export const useSuccessfulRegistrationForm = () => {
             }
         } catch (error) {
             console.error("Error reenviando correo: ", error);
+            const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
             // Ahora el mensage de error contendrá la razón real del fallo (ej: "Email no encontrado" o "Límite excedido")
-            setErrorMessage(error.message || "Ocurrió un error inesperado.");
+            setErrorMessage(message || "Ocurrió un error inesperado.");
             setStatus('resend_error');
         }
     };

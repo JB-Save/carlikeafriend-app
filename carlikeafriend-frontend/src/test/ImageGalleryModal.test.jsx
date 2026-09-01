@@ -1,6 +1,8 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { fireEvent, render, screen, waitFor } from '../utils/test-utils';
+import { vi, describe, it, expect } from 'vitest';
 import { ImageGalleryModal } from '../components/ImageGalleryModal';
+import { API_CONFIG } from '../config/apiConfig';
 
 describe('ImageGalleryModal', () => {
     // Datos de producto de ejemplo para las pruebas.
@@ -14,9 +16,9 @@ describe('ImageGalleryModal', () => {
 
     const mockOnClose = vi.fn();
 
-    // Resetear los mocks antes de cada prueba.
-    beforeEach(() => {
-        vi.clearAllMocks();
+    it('no debe renderizar nada si el producto es nulo o indefinido', () => {
+        const { container } = render(<ImageGalleryModal product={null} onClose={mockOnClose} />);
+        expect(container).toBeEmptyDOMElement();
     });
 
     it('debe renderizar el modal con las imágenes del producto cuando se le pasa un producto', () => {
@@ -24,24 +26,29 @@ describe('ImageGalleryModal', () => {
         render(<ImageGalleryModal product={mockProduct} onClose={mockOnClose} />);
 
         // Verificar que el título del modal contenga el nombre del producto.
-        expect(screen.getByText(`Galería de Imágenes de ${mockProduct.name}`)).toBeInTheDocument();
+        expect(screen.getByText('Galería de Imágenes:')).toBeInTheDocument();
+        expect(screen.getByText(`${mockProduct.name}`)).toBeInTheDocument();
 
-        // Verificar que el componente hijo CompleteGallaryModal se renderice.
-        // Contamos el número de imágenes renderizadas usando el data-testid.
+        // Verificar que el componente hijo se renderice contando las imágenes con data-testid.
         const images = screen.getAllByTestId('gallery-image');
         expect(images.length).toBe(mockProduct.productImages.length);
 
+        // Uso dinámico de API_CONFIG para evitar errores por barras dobles o URLs hardcodeadas
+        const expectedUrl = `${API_CONFIG.PRODUCT_IMAGES_BASE}${mockProduct.productImages[0].imagePath}`;
+
         // Verificar que la URL de la primera imagen sea correcta.
-        expect(images[0]).toHaveAttribute('src', `http://localhost:8080/carlikeafriend/products/images${mockProduct.productImages[0].imagePath}`);
+        expect(images[0]).toHaveAttribute('src', expectedUrl);
     });
 
-    it('debe llamar a la función onClose cuando se hace clic en el botón de cerrar', () => {
+    it('debe llamar a la función onClose cuando se hace clic en el botón de cerrar', async () => {
+        const user = userEvent.setup();
         // Renderizar el componente con un producto y el mock de la función de cierre.
         render(<ImageGalleryModal product={mockProduct} onClose={mockOnClose} />);
 
-        // Obtener el botón de cerrar por su rol o texto.
-         expect(screen.getByText('Cerrar')).toBeInTheDocument();
-         screen.getByText('Cerrar').click();
+        const closeButton = screen.getByRole('button', { name: /Cerrar/i });
+        expect(closeButton).toBeInTheDocument();
+
+        await user.click(closeButton);
 
         // Asegurarse de que la función onClose haya sido llamada.
         expect(mockOnClose).toHaveBeenCalledTimes(1);
@@ -54,7 +61,7 @@ describe('ImageGalleryModal', () => {
         // Obtener la primera imagen renderizada.
         const image = screen.getAllByTestId('gallery-image')[0];
 
-        // Simular un evento de error de carga en la imagen.
+        // Simular un evento de error de carga en la imagen usando fireEvent (requerido para eventos nativos de elementos multimedia)
         fireEvent.error(image);
 
         // Esperar a que el src de la imagen se actualice con el placeholder.

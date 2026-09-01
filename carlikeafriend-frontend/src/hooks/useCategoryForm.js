@@ -7,18 +7,13 @@ import { useMessageModal } from '../context/MessageModalContext';
 import { API_CONFIG } from '../config/apiConfig';
 
 export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => {
-  const [categoryData, setCategoryData] = useState({
-    name: '',
-    description: ''
-  });
-
   const { token, logout } = useContext(UserContext); // Obtener token
   const { setModalMessage } = useMessageModal();
   const [newImages, setNewImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [error, setError] = useState(null);
   const [imageUploadError, setImageUploadError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const fileInputRef = useRef(null);
 
   const navigate = useNavigate(); // <-- Usa useNavigate para la navegación
@@ -28,25 +23,15 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
   useEffect(() => {
     if (categoryToEdit) {
       const singleImageObjectAsList = new Array(categoryToEdit.categoryImage);
-      setCategoryData({
-        name: categoryToEdit.name,
-        description: categoryToEdit.description
-      });
       setExistingImages(singleImageObjectAsList);
     } else {
-      resetForm();
+      resetImagesState();
     }
   }, [categoryToEdit]);
 
   // Calcula la cantidad disponible para la nueva imagen
   const availableSlots = MAX_IMAGES - existingImages.length - newImages.length;
   const canAddMoreImages = availableSlots > 0;
-
-  // Maneja cambios en los campos de texto
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setCategoryData(prevData => ({ ...prevData, [name]: value }));
-  };
 
   // Maneja la selección de nuevas imágenes
   const handleNewImageChange = (e) => {
@@ -115,11 +100,9 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-
     } else {
       setNewImages(prevFiles => [...prevFiles, ...validSizeFiles]);
     }
-
   };
 
   // Maneja la eliminación de imágenes existentes
@@ -136,12 +119,7 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
     setImageUploadError(null);
   };
 
-  // Función para resetear el formulario.
-  const resetForm = useCallback(() => {
-    setCategoryData({
-      name: '',
-      description: ''
-    });
+  const resetImagesState = useCallback(() => {
     setNewImages([]);
     setExistingImages([]);
     setImageUploadError(null);
@@ -151,25 +129,30 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
     }
   }, []);
 
-  // Envía el formulario al backend
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const submitCategoryData = async (data) => {
+    setIsSubmittingForm(true);
     setError(null);
     setImageUploadError(null);
 
     // Verifica si el array de categorías está vacío
     if (existingImages.length === 0 && newImages.length === 0) {
       setError("Debes seleccionar al menos una imagen.");
-      setIsLoading(false);
+      setIsSubmittingForm(false);
       return;
     }
+
+    const payload = {
+      ...data,
+      baseDailyRate: Number(data.baseDailyRate),
+      priority: Number(data.priority),
+      baseDepositAmount: Number(data.baseDepositAmount)
+    };
 
     // Crea el objeto FormData para enviar datos y archivos
     const formData = new FormData();
 
     // Añade el objeto de categoría como un JSON, ya que Spring lo espera con @RequestPart
-    formData.append('category', new Blob([JSON.stringify(categoryData)], { type: 'application/json' }));
+    formData.append('category', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
 
     // Lógica para manejar las imágenes dependiendo de si se crea o se actualiza
     if (categoryToEdit) {
@@ -187,17 +170,17 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
     }
 
     try {
-      let response;
+
       const URL = categoryToEdit
         ? `${API_CONFIG.CATEGORIES}/${categoryToEdit.id}`
         : API_CONFIG.CATEGORIES;
 
       const method = categoryToEdit ? 'PUT' : 'POST';
 
-      response = await fetch(URL, {
+      const response = await fetch(URL, {
         method: method,
         headers: {
-          'Authorization': `Bearer ${token}` // ¡AÑADIR TOKEN!
+          'Authorization': `Bearer ${token}`
         },
         body: formData
         // No es necesario especificar el 'Content-Type' aquí, el navegador lo hará.
@@ -208,7 +191,7 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
 
       if (response.ok) {
         if (onCategorySaved) onCategorySaved();
-        resetForm();
+        resetImagesState();
       } else {
         // Manejo de otros errores (400, 500, etc.)
         const msg = await extractErrorMessage(response);
@@ -216,26 +199,25 @@ export const useCategoryForm = (categoryToEdit, MAX_IMAGES, onCategorySaved) => 
       }
     } catch (error) {
       console.error("Error guardando categoría: ", error);
-      setError(error.message || "Ocurrió un error inesperado");
+      const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+      setError(message || "Ocurrió un error inesperado");
     } finally {
-      setIsLoading(false);
+      setIsSubmittingForm(false);
     }
   };
 
   return {
-    categoryData,
     newImages,
     existingImages,
     error,
-    isLoading,
+    isSubmittingForm,
     imageUploadError,
     availableSlots,
     canAddMoreImages,
     fileInputRef,
-    handleChange,
     handleNewImageChange,
     handleRemoveExistingImage,
     handleRemoveNewImageFile,
-    handleSubmit,
+    submitCategoryData
   };
 }

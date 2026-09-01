@@ -28,12 +28,15 @@ export const AddUserComponent = () => {
 
   return (
 
-    <div col="row">
-      <div className="col-12 col-md-8 mx-auto">
-        <div className="card card-shadow card-background p-4">
-          <h1 className="fs-3 fw-bold text-center form-title mb-4">
-            {userToEdit ? 'Editar Usuario' : ''}
-          </h1>
+    <div className="row">
+      <div className="col-12 col-xl-10 mx-auto">
+        <div className="card custom-card-shadow custom-card-background p-4 p-md-5">
+          <div className="d-flex align-items-center mb-4 pb-2 border-bottom">
+            <i className="bi bi-person-gear display-6 text-primary me-3"></i>
+            <h4 className="fw-bold form-title m-0">
+              {userToEdit ? 'Edición de Perfil de Usuario' : ''}
+            </h4>
+          </div>
           <UserForm
             userToEdit={userToEdit}
             onUserSaved={handleUserSaved}

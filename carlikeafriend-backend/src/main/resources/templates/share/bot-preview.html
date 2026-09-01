@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${title}"></title>
+    <meta property="og:title" th:content="${title}"/>
+    <meta property="og:description" th:content="${description}"/>
+    <meta property="og:image" th:content="${imageUrl}"/>
+    <meta property="og:url" th:content="${url}"/>
+    <meta property="og:type" content="website"/>
+
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" th:content="${title}"/>
+    <meta name="twitter:image" th:content="${imageUrl}"/>
+</head>
+<body>
+
+</body>
+</html>

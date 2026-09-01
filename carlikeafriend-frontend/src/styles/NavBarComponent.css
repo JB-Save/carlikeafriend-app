@@ -1,25 +1,33 @@
-/* Ajuste para el header fijo */
-.fixed-top {
-    box-shadow: 0 0.125rem 0.25rem rgb(46, 46, 132, 0.8);
-    /* Sombra */
-    border-bottom-left-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
+.sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    /* Sombra más suave y dispersa */
+    box-shadow: 0 4px 15px rgba(46, 46, 132, 0.15);
+    /* Transición suave al hacer scroll */
+    transition: all 0.3s ease;
 }
 
+/* Botones del Navbar */
 .header-btn {
     background-color: #1f88e6;
-    /* Cambia el color del fondo*/
-    border-color: #2e2e84;
-    /* Cambia el color del borde*/
+    /* Quitamos el borde sólido para un look más limpio */
+    border: none;
     color: #f4f3f2;
-    /* Cambia el color del texto */
+    /* Texto ligeramente más grueso */
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+    /* Estilo píldora completo */
+    border-radius: 50rem !important;
+    transition: all 0.2s ease;
 }
 
 .header-btn:hover {
     background-color: #2e2e84;
-    /* Cambia el fondo al pasar el ratón */
     color: #f4f3f2;
-    /* Cambia el color del texto */
+    /* Pequeño efecto de elevación */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(46, 46, 132, 0.2);
 }
 
 .header-color {
@@ -28,31 +36,40 @@
 }
 
 .header-logo-img {
-    /* Tamaño del logo del header */
-    height: 40%;
-    width: 40%;
+    /* Es mejor usar pixeles fijos para logos en el nav */
+    height: 40px;
+    width: auto;
+    /* Borde sutil alrededor del logo */
+    border: 2px solid rgba(244, 243, 242, 0.2);
+    padding: 2px;
 }
 
 .header-logo-text {
-    /* Negrita para el logo */
-    font-weight: 700;
-    /* Color para el texto del logo */
+    /* Más peso para que destaque */
+    font-weight: 800;
     color: #f4f3f2;
+    /* Ligeramente más compacto */
+    letter-spacing: -0.5px;
 }
 
 .header-slogan-text {
-    /* Normal para el lema */
     font-weight: 400;
-    /* Color para el lema */
-    color: #f4f3f2;
+    /* Usamos el azul claro de tu paleta en lugar de blanco puro para dar jerarquía */
+    color: #70acde;
+    font-size: 0.8rem;
 }
 
+/* Estilos del Dropdown del usuario */
 .dropdown-background-color {
-    background-color: #f4f3f2;
-    /* Sombra */
-    box-shadow: 0 0.125rem 0.25rem rgb(46, 46, 132, 0.8);
-    border-bottom-left-radius: 0.5rem;
-    border-bottom-right-radius: 0.5rem;
+    /* Fondo blanco limpio */
+    background-color: #ffffff;
+    border: none;
+    /* Sombra amplia */
+    box-shadow: 0 10px 25px rgba(46, 46, 132, 0.15);
+    /* Bordes bien redondeados */
+    border-radius: 1rem;
+    padding: 1rem 0;
+    margin-top: 10px;
 }
 
 .dropdown-text-muted {
@@ -60,35 +77,43 @@
     color: #6a5e9b !important;
 }
 
-/* Cambia el color del borde del spinner */
 .dropdown-text {
-    color: #2e2e84 !important;
+    color: #2e2e84;
+    font-weight: 600;
 }
 
-.nav-link.background.active{
-    background-color: #6a5e9b  !important;;
-    
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+    color: #1f88e6;
 }
 
-.dropdown-menu{
+.dropdown-divider {
+    border-top-color: #f4f3f2;
+}
+
+.nav-link.background.active {
+    background-color: #6a5e9b !important;
+    ;
+
+}
+
+.dropdown-menu {
     min-width: 18.5rem;
+    margin-top: 1.4rem !important;
 }
 
 
 @media (max-width: 767px) {
-    
-     .container-fluid{
-         align-items: start !important;
-     }
 
-     .dropdown-menu-end{
+    .container-fluid {
+        align-items: start !important;
+    }
+
+    .dropdown-menu-end {
         right: auto !important;
         left: 0 !important;
         margin-top: 1rem !important;
-     }
-
-     
-         
+    }
 }
 
 /* 320px -  768px - 1024px

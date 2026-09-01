@@ -10,17 +10,14 @@ export const CategoryTableComponent = ({ categories, setCategoryIdToDelete }) =>
         navigate('/administration/add-category', { replace: true, state: { categoryToEdit: category } });
     };
 
-
-
-
     return (
         <div className="table-responsive">
-            <table className="table table-hover table-striped table-custom">
+            <table className="table table-hover table-striped table-custom align-middle">
                 <thead>
                     <tr>
-                        <th scope="col">ID</th>
-                        <th scope="col">Nombre</th>
-                        <th className="text-center" scope="col">Acciones</th>
+                        <th scope="col" style={{ width: '10%' }}>ID</th>
+                        <th scope="col" style={{ width: '60%' }}>Nombre</th>
+                        <th className="text-center" scope="col" style={{ width: '30%' }}>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,19 +25,21 @@ export const CategoryTableComponent = ({ categories, setCategoryIdToDelete }) =>
                         <tr key={category.id}>
                             <th scope="row">{category.id}</th>
                             <td>{category.name}</td>
-                            <td className="d-flex flex-row justify-content-center gap-3">
-                                <button
-                                    className='btn btn-danger btn-sm rounded-3'
-                                    onClick={() => setCategoryIdToDelete(category.id)}
-                                >
-                                    Eliminar
-                                </button>
-                                <button
-                                    className='btn btn-success btn-sm rounded-3'
-                                    onClick={() => handleEditClick(category)}
-                                >
-                                    Editar
-                                </button>
+                            <td className="text-center">
+                                <div className="d-inline-flex gap-2">
+                                    <button
+                                        className='btn btn-danger btn-sm rounded-3'
+                                        onClick={() => setCategoryIdToDelete(category.id)}
+                                    ><i className="bi bi-trash me-1"></i>
+                                        Eliminar
+                                    </button>
+                                    <button
+                                        className='btn btn-success btn-sm rounded-3'
+                                        onClick={() => handleEditClick(category)}
+                                    ><i className="bi bi-pencil-square me-1"></i>
+                                        Editar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     ))}

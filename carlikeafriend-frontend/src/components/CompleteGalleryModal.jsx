@@ -15,26 +15,20 @@ export const CompleteGalleryModal = ({ images, productName }) => {
     };
 
     return (
-        <>
-            {
-                images.map((image, index) => {
-
-                    return (
-                        < img
-                            key={index}
-                            data-testid="gallery-image"
-                            src={imagePath(images, index)}
-                            className="img-fluid rounded-3 mb-3"
-                            alt={`Imagen ${index + 1} de ${productName}`}
-                            onError={handleImageError}
-                            loading="lazy"
-                        />
-                    );
-
-                })
-            }
-
-        </>
-
+        <div className="row g-3">
+            {images.map((image, index) => (
+                <div className="col-12 col-sm-6 col-lg-4" key={index}>
+                    <img
+                        data-testid="gallery-image"
+                        src={imagePath(images, index)}
+                        className="img-fluid rounded-3 w-100 shadow-sm"
+                        alt={`Imagen ${index + 1} de ${productName}`}
+                        onError={handleImageError}
+                        loading="lazy"
+                        style={{ objectFit: 'cover' }}
+                    />
+                </div>
+            ))}
+        </div>
     );
 }

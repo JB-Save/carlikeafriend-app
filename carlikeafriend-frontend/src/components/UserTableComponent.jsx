@@ -13,13 +13,13 @@ export const UserTableComponent = ({ users, setUserIdToDelete }) => {
 
     return (
         <div className="table-responsive">
-            <table className="table table-hover table-striped table-custom">
+            <table className="table table-hover table-striped table-custom align-middle">
                 <thead>
                     <tr>
-                        <th scope="col">ID</th>
-                        <th scope="col">Nombre</th>
-                        <th scope="col">Email</th>
-                        <th className="text-center" scope="col">Acciones</th>
+                        <th scope="col" style={{ width: '10%' }}>ID</th>
+                        <th scope="col" style={{ width: '30%' }}>Nombre</th>
+                        <th scope="col" style={{ width: '30%' }}>Email</th>
+                        <th className="text-center" scope="col" style={{ width: '30%' }}>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -28,19 +28,21 @@ export const UserTableComponent = ({ users, setUserIdToDelete }) => {
                             <th scope="row">{user.id}</th>
                             <td>{`${user.name} ${user.lastName}`}</td>
                             <td>{user.email}</td>
-                            <td className="d-flex flex-row justify-content-center gap-3">
-                                <button
-                                    className='btn btn-danger btn-sm rounded-3'
-                                    onClick={() => setUserIdToDelete(user.id)}
-                                >
-                                    Eliminar
-                                </button>
-                                <button
-                                    className='btn btn-success btn-sm rounded-3'
-                                    onClick={() => handleEditClick(user)}
-                                >
-                                    Editar
-                                </button>
+                            <td className="text-center">
+                                <div className="d-inline-flex gap-2">
+                                    <button
+                                        className='btn btn-danger btn-sm rounded-3'
+                                        onClick={() => setUserIdToDelete(user.id)}
+                                    ><i className="bi bi-trash me-1"></i>
+                                        Eliminar
+                                    </button>
+                                    <button
+                                        className='btn btn-success btn-sm rounded-3'
+                                        onClick={() => handleEditClick(user)}
+                                    ><i className="bi bi-pencil-square me-1"></i>
+                                        Editar
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                     ))}

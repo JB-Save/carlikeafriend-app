@@ -7,17 +7,14 @@ import { useMessageModal } from '../context/MessageModalContext';
 import { API_CONFIG } from '../config/apiConfig';
 
 export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
-  const [featureData, setFeatureData] = useState({
-    name: ''
-  });
 
-  const { token, logout } = useContext(UserContext); // Obtener token
+  const { token, logout } = useContext(UserContext);
   const { setModalMessage } = useMessageModal();
   const [newImages, setNewImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [error, setError] = useState(null);
   const [imageUploadError, setImageUploadError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const fileInputRef = useRef(null);
 
   const navigate = useNavigate(); // <-- Usa useNavigate para la navegación
@@ -27,24 +24,15 @@ export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
   useEffect(() => {
     if (featureToEdit) {
       const singleImageObjectAsList = new Array(featureToEdit.icon);
-      setFeatureData({
-        name: featureToEdit.name
-      });
       setExistingImages(singleImageObjectAsList);
     } else {
-      resetForm();
+      resetImagesState();
     }
   }, [featureToEdit]);
 
   // Calcula la cantidad disponible para la nueva imagen
   const availableSlots = MAX_IMAGES - existingImages.length - newImages.length;
   const canAddMoreImages = availableSlots > 0;
-
-  // Maneja cambios en los campos de texto
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFeatureData(prevData => ({ ...prevData, [name]: value }));
-  };
 
   // Maneja la selección de nuevas imágenes
   const handleNewImageChange = (e) => {
@@ -113,7 +101,6 @@ export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-
     } else {
       setNewImages(prevFiles => [...prevFiles, ...validSizeFiles]);
     }
@@ -134,10 +121,7 @@ export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
   };
 
   // Función para resetear el formulario.
-  const resetForm = useCallback(() => {
-    setFeatureData({
-      name: ''
-    });
+  const resetImagesState = useCallback(() => {
     setNewImages([]);
     setExistingImages([]);
     setImageUploadError(null);
@@ -148,24 +132,27 @@ export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
   }, []);
 
   // Envía el formulario al backend
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const submitFeatureData = async (data) => {
+    setIsSubmittingForm(true);
     setError(null);
     setImageUploadError(null);
 
     // Verifica si el array de características está vacío
     if (existingImages.length === 0 && newImages.length === 0) {
       setError("Debes seleccionar al menos una imagen.");
-      setIsLoading(false);
+      setIsSubmittingForm(false);
       return;
     }
+
+    const payload = {
+      ...data
+    };
 
     // Crea el objeto FormData para enviar datos y archivos
     const formData = new FormData();
 
     // Añade el objeto de característica como un JSON, ya que Spring lo espera con @RequestPart
-    formData.append('feature', new Blob([JSON.stringify(featureData)], { type: 'application/json' }));
+    formData.append('feature', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
 
     // Lógica para manejar las imágenes dependiendo de si se crea o se actualiza
     if (featureToEdit) {
@@ -183,27 +170,26 @@ export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
     }
 
     try {
-      let response;
+
       const URL = featureToEdit
         ? `${API_CONFIG.FEATURES}/${featureToEdit.id}`
         : API_CONFIG.FEATURES;
 
       const method = featureToEdit ? 'PUT' : 'POST';
 
-      response = await fetch(URL, {
+      const response = await fetch(URL, {
         method: method,
         headers: {
-          'Authorization': `Bearer ${token}` // ¡AÑADIR TOKEN!
+          'Authorization': `Bearer ${token}`
         },
         body: formData
-        // No es necesario especificar el 'Content-Type' aquí, el navegador lo hará.
       });
 
       if (handleUnauthorizedError(response, navigate, logout, setModalMessage)) return; // Detener si fue un 401
 
       if (response.ok) {
         if (onFeatureSaved) onFeatureSaved();
-        resetForm();
+        resetImagesState();
       } else {
         // Manejo de otros errores (400, 500, etc.)
         const msg = await extractErrorMessage(response);
@@ -211,26 +197,25 @@ export const useFeatureForm = (featureToEdit, MAX_IMAGES, onFeatureSaved) => {
       }
     } catch (error) {
       console.error("Error guardando característica: ", error);
-      setError(error.message || "Ocurrió un error inesperado");
+      const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+      setError(message || "Ocurrió un error inesperado");
     } finally {
-      setIsLoading(false);
+      setIsSubmittingForm(false);
     }
   };
 
   return {
-    featureData,
     newImages,
     existingImages,
     error,
-    isLoading,
+    isSubmittingForm,
     imageUploadError,
     availableSlots,
     canAddMoreImages,
     fileInputRef,
-    handleChange,
     handleNewImageChange,
     handleRemoveExistingImage,
     handleRemoveNewImageFile,
-    handleSubmit,
+    submitFeatureData
   };
 }

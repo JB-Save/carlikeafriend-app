@@ -14,6 +14,12 @@ public class AppConfigValidator {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    @Value("${frontend.base-url}")
+    private String frontendBaseUrl;
+
+    @Value("${backend.base-url}")
+    private String backendBaseUrl;
+
     @Value("${app.frontend.login-url}")
     private String loginUrl;
 
@@ -41,10 +47,12 @@ public class AppConfigValidator {
         logger.info("Verificando integridad de la configuración...");
 
         validate(uploadDir, "UPLOAD_DIR", true);
-        validate(loginUrl, "FRONTEND_URL", true);
+        validate(frontendBaseUrl, "FRONTEND_URL", true);
+        validate(backendBaseUrl, "BACKEND_URL", true);
+        validate(loginUrl, "FRONTEND_LOGIN_URL", true);
         validate(dbUrl, "DB_URL", true);
         validate(dbUsername, "DB_USER", true);
-        validate(dbPassword, "DB_PASSWORD", false); // Sí creaste contraseña en la DB cambia a 'true'
+        validate(dbPassword, "DB_PASSWORD", false); // Sí se crea contraseña en la DB cambiar a 'true'
         validate(jwtSecret, "JWT_SECRET", true);
         validate(mailUsername, "MAIL_USER", true);
         validate(mailPassword, "MAIL_PASSWORD", true);

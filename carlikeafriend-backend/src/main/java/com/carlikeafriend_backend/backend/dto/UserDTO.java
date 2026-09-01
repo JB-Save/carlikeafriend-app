@@ -1,37 +1,88 @@
 package com.carlikeafriend_backend.backend.dto;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Set;
 
 public class UserDTO {
 
-    @NotBlank(message = "El Nombre no debe estar vacío")
-    @Size(min = 3, max = 100, message = "El nombre debe tener entre 3 y 100 caracteres")
+    @NotBlank(message = "El nombre es obligatorio")
+    @Size(max = 60, message = "El nombre no debe exceder los 60 caracteres")
     private String name;
 
-    @NotBlank(message = "El apellido no debe estar vacío")
-    @Size(min = 3, max = 100, message = "El apellido debe tener entre 3 y 100 caracteres")
+    @NotBlank(message = "El apellido es obligatorio")
+    @Size(max = 60, message = "El apellido no debe exceder los 60 caracteres")
     private String lastName;
 
-    @NotBlank(message = "El correo electrónico no debe estar vacío")
+    @NotBlank(message = "El tipo de documento es obligatorio")
+    @Size(max = 35, message = "El tipo de documento no debe exceder los 35 caracteres")
+    private String documentType;
+
+    @NotBlank(message = "El número de documento es obligatorio")
+    @Pattern(regexp = "^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$", message = "El número de documento solo puede contener letras, números y guiones intermedios")
+    @Size(min = 5, max = 20, message = "El número de documento debe tener entre 5 y 20 caracteres")
+    private String documentNumber;
+
+    @NotBlank(message = "El número de teléfono es obligatorio")
+    @Pattern(regexp = "^\\+?[1-9]\\d{6,14}$", message = "Formato de teléfono inválido (Debe incluir código de país, ej: +573001234567, entre 7 y 15 dígitos)")
+    private String phoneNumber;
+
+    @NotBlank(message = "La nacionalidad es obligatoria")
+    @Size(max = 25, message = "La nacionalidad no debe exceder los 25 caracteres")
+    private String nationality;
+
+    @NotBlank(message = "El país es obligatorio")
+    @Size(min = 2, max = 2, message = "El país debe ser el código ISO 3166-1 alpha-2 (ej. CO, US)")
+    private String countryCode;
+
+    @NotBlank(message = "El estado o departamento es obligatorio")
+    @Size(max = 10, message = "El estado o departamento debe ser el código ISO 3166-2 (Ej. ANT)")
+    private String stateCode;
+
+    @NotBlank(message = "La ciudad de residencia es obligatoria")
+    @Size(max = 100, message = "La ciudad de residencia no debe exceder los 100 caracteres")
+    private String city;
+
+    @NotBlank(message = "La dirección de residencia es obligatoria")
+    @Size(max = 100, message = "La dirección de residencia no debe exceder los 100 caracteres")
+    private String address;
+
+    @NotBlank(message = "El código postal es obligatorio")
+    @Pattern(regexp = "^[A-Za-z0-9]+([\\s\\-][A-Za-z0-9]+)*$", message = "El código postal solo puede contener letras, números y un espacio o guion intermedio")
+    @Size(min = 3, max = 10, message = "El código postal debe tener entre 3 y 10 caracteres")
+    private String zipCode;
+
+    @NotNull(message = "La fecha de nacimiento es obligatoria")
+    @Past(message = "La fecha de nacimiento debe ser una fecha en el pasado")
+    private LocalDate birthDate;
+
+    @NotBlank(message = "La licencia de conducir es obligatoria")
+    @Pattern(regexp = "^[A-Za-z0-9]+(-[A-Za-z0-9]+)*$", message = "La licencia solo puede contener letras, números y guiones intermedios")
+    @Size(min = 5, max = 20, message = "La licencia debe tener entre 5 y 20 caracteres")
+    private String driverLicenseNumber;
+
+    @NotNull(message = "La fecha de expiración de la licencia es obligatoria")
+    @FutureOrPresent(message = "La fecha de expiración de la licencia no puede ser en el pasado")
+    private LocalDate driverLicenseExpiry;
+
+    @NotBlank(message = "El nombre del contacto de emergencia es obligatorio")
+    @Size(max = 100, message = "El nombre del contacto de emergencia no debe exceder los 100 caracteres")
+    private String emergencyContactName;
+
+    @NotBlank(message = "El número de contacto de emergencia es obligatorio")
+    @Pattern(regexp = "^\\+?[1-9]\\d{6,14}$", message = "Formato de teléfono inválido (Debe incluir código de país, ej: +573001234567, entre 7 y 15 dígitos)")
+    private String emergencyContactPhone;
+
+    @NotBlank(message = "El correo electrónico es obligatorio")
     @Email(message = "El formato del email es inválido")
     @Size(max = 255, message = "El email no debe exceder los 255 caracteres")
     private String email;
 
-    Set<Long> rolesIds = new HashSet<>();
+    Set<Long> roleIds = new HashSet<>();
 
     public UserDTO() {
-    }
-
-    public UserDTO(String name, String lastName, String email, Set<Long> rolesIds) {
-        this.name = name;
-        this.lastName = lastName;
-        this.email = email;
-        this.rolesIds = rolesIds;
     }
 
     public String getName() {
@@ -50,6 +101,118 @@ public class UserDTO {
         this.lastName = lastName;
     }
 
+    public String getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(String documentType) {
+        this.documentType = documentType;
+    }
+
+    public String getDocumentNumber() {
+        return documentNumber;
+    }
+
+    public void setDocumentNumber(String documentNumber) {
+        this.documentNumber = documentNumber;
+    }
+
+    public String getPhoneNumber() {
+        return phoneNumber;
+    }
+
+    public void setPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public String getNationality() {
+        return nationality;
+    }
+
+    public void setNationality(String nationality) {
+        this.nationality = nationality;
+    }
+
+    public String getCountryCode() {
+        return countryCode;
+    }
+
+    public void setCountryCode(String countryCode) {
+        this.countryCode = countryCode;
+    }
+
+    public String getStateCode() {
+        return stateCode;
+    }
+
+    public void setStateCode(String stateCode) {
+        this.stateCode = stateCode;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getZipCode() {
+        return zipCode;
+    }
+
+    public void setZipCode(String zipCode) {
+        this.zipCode = zipCode;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public void setBirthDate(LocalDate birthDate) {
+        this.birthDate = birthDate;
+    }
+
+    public String getDriverLicenseNumber() {
+        return driverLicenseNumber;
+    }
+
+    public void setDriverLicenseNumber(String driverLicenseNumber) {
+        this.driverLicenseNumber = driverLicenseNumber;
+    }
+
+    public LocalDate getDriverLicenseExpiry() {
+        return driverLicenseExpiry;
+    }
+
+    public void setDriverLicenseExpiry(LocalDate driverLicenseExpiry) {
+        this.driverLicenseExpiry = driverLicenseExpiry;
+    }
+
+    public String getEmergencyContactName() {
+        return emergencyContactName;
+    }
+
+    public void setEmergencyContactName(String emergencyContactName) {
+        this.emergencyContactName = emergencyContactName;
+    }
+
+    public String getEmergencyContactPhone() {
+        return emergencyContactPhone;
+    }
+
+    public void setEmergencyContactPhone(String emergencyContactPhone) {
+        this.emergencyContactPhone = emergencyContactPhone;
+    }
+
     public String getEmail() {
         return email;
     }
@@ -58,11 +221,11 @@ public class UserDTO {
         this.email = email;
     }
 
-   public Set<Long> getRoles() {
-        return rolesIds;
+    public Set<Long> getRoleIds() {
+        return roleIds;
     }
 
-   public void setRoles(Set<Long> rolesIds) {
-        this.rolesIds = rolesIds;
+    public void setRoleIds(Set<Long> roleIds) {
+        this.roleIds = roleIds;
     }
 }

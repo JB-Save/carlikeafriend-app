@@ -29,12 +29,12 @@ export const AddPermissionComponent = () => {
 
   return (
 
-    <div col="row">
-      <div className="col-12 col-md-8 mx-auto">
-        <div className="card card-shadow card-background p-4">
-          <h1 className="fs-3 fw-bold text-center form-title mb-4">
-            {permissionToEdit ? 'Editar Permiso' : 'Crear Permiso'}
-          </h1>
+    <div className="row">
+      <div className="col-12 col-md-10 mx-auto">
+        <div className="card custom-card-shadow custom-card-background p-4 p-md-5">
+          <h4 className="fw-bold text-center form-title mb-4">
+            {permissionToEdit ? 'Edición de Permiso' : 'Registro de Nuevo Permiso'}
+          </h4>
           <PermissionForm
             permissionToEdit={permissionToEdit}
             onPermissionSaved={handlePermissionSaved}

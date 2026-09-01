@@ -6,8 +6,9 @@ import com.carlikeafriend_backend.backend.dto.FeatureResponseDTO;
 import com.carlikeafriend_backend.backend.entity.Feature;
 import com.carlikeafriend_backend.backend.entity.Icon;
 import com.carlikeafriend_backend.backend.event.ImageDeletedEvent;
+import com.carlikeafriend_backend.backend.exception.InvalidFileExtensionException;
 import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.repository.IFeatureRepository;
 import com.carlikeafriend_backend.backend.service.impl.FeatureService;
 import com.carlikeafriend_backend.backend.service.impl.FileStorageService;
@@ -57,6 +58,7 @@ class FeatureServiceTest {
         existingFeature = new Feature();
         existingFeature.setId(1L);
         existingFeature.setName("Antigua");
+        existingFeature.setDeleted(false);
 
         Icon img = new Icon();
         img.setImagePath("/image/feature_folder/old.jpg");
@@ -67,9 +69,22 @@ class FeatureServiceTest {
     }
 
     @Test
+    @DisplayName("Crear característica: Lanza excepción si el archivo es inválido")
+    void createFeature_InvalidFile_StopsExecution() throws Exception {
+        MultipartFile mockFile = new MockMultipartFile("invalid", "test.txt", "text/plain", "content".getBytes());
+        doThrow(new InvalidFileExtensionException("No permitido"))
+                .when(fileValidationUtils).validateImageFile(mockFile);
+
+        assertThrows(InvalidFileExtensionException.class, () ->
+                featureService.saveFeature(updateDTO, mockFile)
+        );
+        verify(featureRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("Actualizar característica: Solo texto, mantiene imagen anterior")
     void updateFeature_OnlyText_KeepOldImage() throws IOException {
-        when(featureRepository.findById(1L)).thenReturn(Optional.of(existingFeature));
+        when(featureRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingFeature));
         when(featureRepository.save(any(Feature.class))).thenAnswer(i -> i.getArguments()[0]);
 
         FeatureResponseDTO result = featureService.updateFeature(1L, updateDTO, null);
@@ -80,32 +95,36 @@ class FeatureServiceTest {
     }
 
     @Test
-    @DisplayName("Lanza UniqueNameException si el nombre ya existe al actualizar")
+    @DisplayName("Lanza DuplicateResourceException si el nombre ya existe al actualizar")
     void updateFeature_DuplicateName_ThrowsException() {
-        when(featureRepository.findById(1L)).thenReturn(Optional.of(existingFeature));
-        when(featureRepository.existsByNameAndIdNot(anyString(), anyLong())).thenReturn(true);
+        when(featureRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingFeature));
+        when(featureRepository.existsByNameAndIdNotAndDeletedFalse(anyString(), anyLong())).thenReturn(true);
 
-        assertThrows(UniqueNameException.class, () ->
+        assertThrows(DuplicateResourceException.class, () ->
                 featureService.updateFeature(1L, updateDTO, any())
         );
     }
 
     @Test
-    @DisplayName("Eliminar característica: Verifica publicación de evento para borrado físico")
-    void deleteFeature_PublishesEvent() throws IOException {
-        when(featureRepository.findById(1L)).thenReturn(Optional.of(existingFeature));
+    @DisplayName("Eliminar característica: Verifica borrado lógico y mutación del nombre")
+    void deleteFeature_LogicalDelete() throws IOException {
+        when(featureRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingFeature));
 
         featureService.deleteFeature(1L);
 
-        verify(featureRepository).delete(existingFeature);
-        verify(eventPublisher, times(1)).publishEvent(new ImageDeletedEvent(any()));
+        ArgumentCaptor<Feature> captor = ArgumentCaptor.forClass(Feature.class);
+        verify(featureRepository).save(captor.capture());
+
+        Feature saved = captor.getValue();
+        assertTrue(saved.isDeleted());
+        assertTrue(saved.getName().contains("_DELETED_"));
     }
 
     @Test
     @DisplayName("Actualizar característica: Con nueva imagen, reemplaza la anterior")
     void updateFeature_WithNewImage_ReplacesOldOne() throws IOException {
 
-        when(featureRepository.findById(1L)).thenReturn(Optional.of(existingFeature));
+        when(featureRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingFeature));
         MultipartFile mockFile = new MockMultipartFile("newImage", "newImage.jpg", "image/jpeg", "some-image-bytes".getBytes());
 
         // El servicio llama a validateImageFile, como es un mock de void no hace nada (comportamiento deseado)
@@ -126,7 +145,7 @@ class FeatureServiceTest {
     @Test
     @DisplayName("Lanza ResourceNotFoundException al actualizar característica inexistente")
     void updateFeature_NotFound_ThrowsException() {
-        when(featureRepository.findById(99L)).thenReturn(Optional.empty());
+        when(featureRepository.findByIdAndDeletedFalse(99L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () ->
                 featureService.updateFeature(99L, updateDTO, null)
@@ -137,7 +156,7 @@ class FeatureServiceTest {
     @Test
     @DisplayName("Uso de ArgumentCaptor para verificar campos persistidos")
     void updateFeature_VerifyPersistenceWithCaptor() throws IOException {
-        when(featureRepository.findById(1L)).thenReturn(Optional.of(existingFeature));
+        when(featureRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(existingFeature));
         when(featureRepository.save(any(Feature.class))).thenReturn(existingFeature);
 
         featureService.updateFeature(1L, updateDTO, null);

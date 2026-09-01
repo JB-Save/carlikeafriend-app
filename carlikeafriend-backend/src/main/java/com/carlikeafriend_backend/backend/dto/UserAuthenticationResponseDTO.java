@@ -9,12 +9,12 @@ public class UserAuthenticationResponseDTO {
     private String name;
     private String lastName;
     private String userName;
-    private List<RoleResponseDTO> roles;
+    private List<SimpleResponseDTO> roles;
 
     public UserAuthenticationResponseDTO() {
     }
 
-    public UserAuthenticationResponseDTO(String token, Long id, String name, String lastName, String userName, List<RoleResponseDTO> roles) {
+    public UserAuthenticationResponseDTO(String token, Long id, String name, String lastName, String userName, List<SimpleResponseDTO> roles) {
         this.token = token;
         this.id = id;
         this.name = name;
@@ -63,11 +63,11 @@ public class UserAuthenticationResponseDTO {
         this.userName = userName;
     }
 
-    public List<RoleResponseDTO> getRoles() {
+    public List<SimpleResponseDTO> getRoles() {
         return roles;
     }
 
-    public void setRoles(List<RoleResponseDTO> roles) {
+    public void setRoles(List<SimpleResponseDTO> roles) {
         this.roles = roles;
     }
 }

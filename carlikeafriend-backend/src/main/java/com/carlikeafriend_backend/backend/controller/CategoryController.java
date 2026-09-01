@@ -2,9 +2,9 @@ package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.CategoryDTO;
 import com.carlikeafriend_backend.backend.dto.CategoryResponseDTO;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.exception.ImageLimitExceededException;
 import com.carlikeafriend_backend.backend.exception.InvalidFileExtensionException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.service.ICategoryService;
 import com.carlikeafriend_backend.backend.service.IFileStorageService;
 import jakarta.validation.Valid;
@@ -39,21 +39,21 @@ public class CategoryController {
     @PostMapping("/categories")
     public ResponseEntity<CategoryResponseDTO> saveCategory(@RequestPart("category") @Valid CategoryDTO categoryDTO,
                                                             @RequestPart(value = "imageFile", required = false) MultipartFile imageFile)
-            throws UniqueNameException, ImageLimitExceededException, InvalidFileExtensionException, IOException {
+            throws DuplicateResourceException, ImageLimitExceededException, InvalidFileExtensionException, IOException {
         CategoryResponseDTO savedCategory = categoryService.saveCategory(categoryDTO, imageFile);
         return new ResponseEntity<>(savedCategory, HttpStatus.CREATED);
     }
 
 
     @GetMapping("/categories")
-    public ResponseEntity<List<CategoryResponseDTO>> findAllCategories() {
-        return new ResponseEntity<>(categoryService.findAllCategories(), HttpStatus.OK);
+    public ResponseEntity<List<CategoryResponseDTO>> getAllCategories() {
+        return new ResponseEntity<>(categoryService.getAllCategories(), HttpStatus.OK);
     }
 
 
     @GetMapping("/categories/{id}")
-    public ResponseEntity<CategoryResponseDTO> findCategoryById(@PathVariable Long id) {
-        Optional<CategoryResponseDTO> categoryDTO = categoryService.findCategoryById(id);
+    public ResponseEntity<CategoryResponseDTO> getCategoryById(@PathVariable Long id) {
+        Optional<CategoryResponseDTO> categoryDTO = categoryService.getCategoryById(id);
         return categoryDTO.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
@@ -64,7 +64,7 @@ public class CategoryController {
             @PathVariable Long id,
             @RequestPart("category") @Valid CategoryDTO categoryDTO,
             @RequestPart(value = "newImageFile", required = false) MultipartFile newImageFile)
-            throws UniqueNameException, InvalidFileExtensionException, IOException {
+            throws DuplicateResourceException, InvalidFileExtensionException, IOException {
 
         CategoryResponseDTO updatedCategory = categoryService.updateCategory(id, categoryDTO, newImageFile);
         return new ResponseEntity<>(updatedCategory, HttpStatus.OK);

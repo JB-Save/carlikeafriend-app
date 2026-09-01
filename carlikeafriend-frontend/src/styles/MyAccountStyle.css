@@ -1,0 +1,70 @@
+.favorite-block-title-color,
+.my-reservation-block-title-color,
+.my-account-block-title-color,
+.my-security-block-title-color,
+.my-account-form-text {
+    color: #2e2e84;
+}
+
+.favorite-block-text-muted,
+.my-reservation-block-text-muted,
+.my-account-block-text-muted,
+.my-security-block-text-muted {
+    color: #6a5e9b !important;
+}
+
+.favorite-block-text-primary,
+.my-reservation-block-text-primary,
+.my-security-block-text-primary {
+    color: #1f88e6 !important;
+}
+
+.favorite-block-btn-detail,
+.my-reservation-block-btn-detail {
+    /* Cambia el color del fondo*/
+    background-color: #1f88e6;
+    /* Cambia el color del borde*/
+    border-color: #2e2e84;
+    /* Cambia el color del texto */
+    color: #f4f3f2;
+}
+
+.favorite-block-btn-detail:hover,
+.my-reservation-block-btn-detail:hover {
+    background-color: #2e2e84 !important;
+    color: #f4f3f2 !important;
+}
+
+.hover-lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+.object-fit-cover {
+    object-fit: cover;
+}
+
+.btn-white {
+    background-color: white;
+    border: none;
+}
+
+.custom-my-account-card-shadow {
+    box-shadow: 0 4px 6px rgba(46, 46, 132, 0.8);
+}
+
+.list-group-item {
+    background-color: #f4f3f2;
+}
+
+.my-account-card-header {
+    background-color: #1f88e6;
+    color: #f4f3f2;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem 0.375rem 0 0;
+
+}

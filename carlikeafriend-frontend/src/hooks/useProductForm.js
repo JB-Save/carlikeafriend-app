@@ -7,36 +7,39 @@ import { useMessageModal } from '../context/MessageModalContext';
 import { API_CONFIG } from '../config/apiConfig';
 
 export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
-  const [productData, setProductData] = useState({
-    name: '',
-    description: '',
-    categories: [],
-    features: [],
-    price: ''
-  });
 
   const { token, logout } = useContext(UserContext);
   const { setModalMessage } = useMessageModal();
+
   const [newImages, setNewImages] = useState([]);
   const [existingImages, setExistingImages] = useState([]);
   const [imagesToDeleteIds, setImagesToDeleteIds] = useState([]);
   const [allCategories, setAllCategories] = useState([]);
   const [allFeatures, setAllFeatures] = useState([]);
+  const [allMakes, setAllMakes] = useState([]);
+  const [allPolicies, setAllPolicies] = useState([]);
   const [error, setError] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmittingForm, setIsSubmittingForm] = useState(false);
   const [imageUploadError, setImageUploadError] = useState(null);
   const fileInputRef = useRef(null);
 
   //Estados de carga categorías
   const [isLoadingCategory, setIsLoadingCategory] = useState(true);
   const [categoryError, setCategoryError] = useState(null);
-  const CATEGORIES_URL = API_CONFIG.CATEGORIES;
+
   //Estados de carga características
   const [isLoadingFeature, setIsLoadingFeature] = useState(true);
   const [featureError, setFeatureError] = useState(null);
-  const FEATURES_URL = API_CONFIG.FEATURES;
 
-  const navigate = useNavigate(); // <-- Usa useNavigate para la navegación
+  //Estados de carga marcas
+  const [isLoadingMake, setIsLoadingMake] = useState(true);
+  const [makeError, setMakeError] = useState(null);
+  
+  //Estados de carga políticas
+  const [isLoadingPolicy, setIsLoadingPolicy] = useState(true);
+  const [policyError, setPolicyError] = useState(null);
+
+  const navigate = useNavigate();
   const ALLOWED_MIMES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
   const MAX_FILE_SIZE = API_CONFIG.MAX_FILE_SIZE; // 5 MB en bytes.
 
@@ -45,53 +48,90 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
     const loadFormData = async () => {
       setIsLoadingCategory(true);
       setIsLoadingFeature(true);
+      setIsLoadingMake(true);
+      setIsLoadingPolicy(true);
       setCategoryError(null);
       setFeatureError(null);
+      setMakeError(null);
+      setPolicyError(null);
       try {
         // Lanzamos ambas peticiones en paralelo
-        const [resCat, resFeat] = await Promise.all([
-          fetch(CATEGORIES_URL, {
+        const [catRes, featRes, makeRes, polRes] = await Promise.all([
+          fetch(API_CONFIG.CATEGORIES, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
           }),
-          fetch(FEATURES_URL, {
+          fetch(API_CONFIG.FEATURES, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch(API_CONFIG.MAKES, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+          }),
+          fetch(API_CONFIG.POLICIES, {
             method: 'GET',
             headers: { 'Authorization': `Bearer ${token}` }
           })
         ]);
 
         // Solo necesitamos verificar la autorización UNA VEZ (si una da 401, la otra probablemente también)
-        if (handleUnauthorizedError(resCat, navigate, logout, setModalMessage) ||
-          handleUnauthorizedError(resFeat, navigate, logout, setModalMessage)) {
+        if (handleUnauthorizedError(catRes, navigate, logout, setModalMessage) ||
+          handleUnauthorizedError(featRes, navigate, logout, setModalMessage) ||
+          handleUnauthorizedError(makeRes, navigate, logout, setModalMessage) ||
+          handleUnauthorizedError(polRes, navigate, logout, setModalMessage)) {
           return;
         }
 
         // Procesar Categorías
-        if (resCat.ok) {
-          const catData = await resCat.json();
+        if (catRes.ok) {
+          const catData = await catRes.json();
           setAllCategories(catData);
         } else {
-          const catMsg = await extractErrorMessage(resCat);
+          const catMsg = await extractErrorMessage(catRes);
           setCategoryError(catMsg);
         }
 
         // Procesar Características
-        if (resFeat.ok) {
-          const featData = await resFeat.json();
+        if (featRes.ok) {
+          const featData = await featRes.json();
           setAllFeatures(featData);
         } else {
-          const featMsg = await extractErrorMessage(resFeat);
+          const featMsg = await extractErrorMessage(featRes);
           setFeatureError(featMsg);
         }
 
+        // Procesar Marcas
+        if (makeRes.ok) {
+          const makeData = await makeRes.json();
+          setAllMakes(makeData);
+        } else {
+          const makeMsg = await extractErrorMessage(makeRes);
+          setMakeError(makeMsg);
+        }
+
+        // Procesar Políticas
+        if (polRes.ok) {
+          const polData = await polRes.json();
+          setAllPolicies(polData);
+        } else {
+          const polMsg = await extractErrorMessage(polRes);
+          setPolicyError(polMsg);
+        }
+
       } catch (error) {
-        console.error("Error cargando datos del formulario:", error);
-        // Un error de red genérico para ambos si falla la conexión
-        setCategoryError("Error de conexión.");
-        setFeatureError("Error de conexión.");
+        console.error("Error de red en carga inicial:", error);
+        // Errores de conexión (cuando no hay respuesta del servidor)
+        const networkMsg = "No se pudo establecer conexión con el servidor.";
+        setCategoryError(networkMsg);
+        setFeatureError(networkMsg);
+        setMakeError(networkMsg);
+        setPolicyError(networkMsg);
       } finally {
         setIsLoadingCategory(false);
         setIsLoadingFeature(false);
+        setIsLoadingMake(false);
+        setIsLoadingPolicy(false);
       }
 
     };
@@ -102,80 +142,15 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
 
   useEffect(() => {
     if (productToEdit) {
-      const categoriesIds = productToEdit.categories.map(category => category.id);
-      const featuresIds = productToEdit.features.map(feature => feature.id);
-      setProductData({
-        name: productToEdit.name,
-        description: productToEdit.description,
-        categories: categoriesIds,
-        features: featuresIds,
-        price: productToEdit.price
-      });
       setExistingImages(productToEdit.productImages);
     } else {
-      resetForm();
+      resetImagesState();
     }
-
   }, [productToEdit]);
 
   // Calcula la cantidad de ranuras disponibles para nuevas imágenes
   const availableSlots = MAX_IMAGES - existingImages.length - newImages.length;
   const canAddMoreImages = availableSlots > 0;
-
-  // Maneja cambios en los campos de texto
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setProductData(prevData => ({ ...prevData, [name]: value }));
-  };
-
-  //Maneja cambios en los checklists de categoría
-  const handleCategoryCheckListChange = (e) => {
-    const { value, checked, name } = e.target;
-    const selectedCategoryId = parseInt(value);
-
-    setProductData(prevData => {
-      const currentList = prevData[name] || [];
-
-      if (checked) {
-        // Si el checkbox está marcado, agrega el valor a la lista
-        return {
-          ...prevData,
-          [name]: [...currentList, selectedCategoryId]
-        };
-      } else {
-        // Si no está marcada, filtra el objeto de categoría por su id.
-        return {
-          ...prevData,
-          [name]: currentList.filter(item => item !== selectedCategoryId)
-        };
-      }
-    });
-  };
-
-  //Maneja cambios en los checklists de características
-  const handleFeatureCheckListChange = (e) => {
-    const { value, checked, name } = e.target;
-    const selectedFeatureId = parseInt(value);
-
-    setProductData(prevData => {
-      const currentList = prevData[name] || [];
-
-      if (checked) {
-        // Si el checkbox está marcado, agrega el valor a la lista
-        return {
-          ...prevData,
-          [name]: [...currentList, selectedFeatureId]
-        };
-      } else {
-        // Si no está marcada, filtra el objeto de característica por su id.
-        return {
-          ...prevData,
-          [name]: currentList.filter(item => item !== selectedFeatureId)
-        };
-      }
-    });
-  };
-
 
   // Maneja la selección de nuevas imágenes
   const handleNewImageChange = (e) => {
@@ -222,8 +197,8 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
       let slotError = '';
       let ignoredFiles = files.length - slotsRemaining;
       let additionalErrorText = ignoredFiles === 1
-        ? `${files.length - slotsRemaining} archivo fue ignorado. `
-        : `${files.length - slotsRemaining} archivos fueron ignorados. `
+        ? `${ignoredFiles} archivo fue ignorado. `
+        : `${ignoredFiles} archivos fueron ignorados. `
 
       if (slotsRemaining > 0) {
         slotError = slotsRemaining === 1
@@ -244,7 +219,6 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-
     } else {
       setNewImages(prevFiles => [...prevFiles, ...validSizeFiles]);
     }
@@ -266,18 +240,10 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
   };
 
   // Función para resetear el formulario.
-  const resetForm = useCallback(() => {
-    setProductData({
-      name: '',
-      description: '',
-      categories: [],
-      features: [],
-      price: ''
-    });
+  const resetImagesState = useCallback(() => {
     setNewImages([]);
     setExistingImages([]);
     setImagesToDeleteIds([]);
-    //setError(null);
     setImageUploadError(null);
     // Limpiar el input de archivos
     if (fileInputRef.current) {
@@ -285,39 +251,31 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
     }
   }, []);
 
-  // Envía el formulario al backend
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const submitProductData = async (data) => {
+    setIsSubmittingForm(true);
     setError(null);
     setImageUploadError(null);
-
-    // Verifica si el array de categorías está vacío
-    if (productData.categories.length === 0) {
-      setError("Debes seleccionar al menos una categoría.");
-      setIsLoading(false);
-      return;
-    }
-
-    // Verifica si el array de características está vacío
-    if (productData.features.length === 0) {
-      setError("Debes seleccionar al menos una característica.");
-      setIsLoading(false);
-      return;
-    }
 
     // Verifica si el array de Imágenes está vacío
     if (existingImages.length === 0 && newImages.length === 0) {
       setError("Debes seleccionar al menos una imagen.");
-      setIsLoading(false);
+      setIsSubmittingForm(false);
       return;
     }
+
+    const payload = {
+      ...data,
+      makeId: Number(data.makeId),
+      categories: data.categories.map(id => Number(id)),
+      features: data.features.map(id => Number(id)),
+      policies: data.policies.map(id => Number(id))
+    };
 
     // Crea el objeto FormData para enviar datos y archivos
     const formData = new FormData();
 
     // Añade el objeto de producto como un JSON, ya que Spring lo espera con @RequestPart
-    formData.append('product', new Blob([JSON.stringify(productData)], { type: 'application/json' }));
+    formData.append('product', new Blob([JSON.stringify(payload)], { type: 'application/json' }));
 
     // Lógica para manejar las imágenes dependiendo de si se crea o se actualiza
     if (productToEdit) {
@@ -339,27 +297,26 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
     }
 
     try {
-      let response;
+
       const URL = productToEdit
         ? `${API_CONFIG.PRODUCTS}/${productToEdit.id}`
         : API_CONFIG.PRODUCTS;
 
       const method = productToEdit ? 'PUT' : 'POST';
 
-      response = await fetch(URL, {
+      const response = await fetch(URL, {
         method: method,
         headers: {
-          'Authorization': `Bearer ${token}` // ¡AÑADIR TOKEN!
+          'Authorization': `Bearer ${token}`
         },
         body: formData
-        // No es necesario especificar el 'Content-Type' aquí, el navegador lo hará.
       });
 
       if (handleUnauthorizedError(response, navigate, logout, setModalMessage)) return; // Detener si fue un 401
 
       if (response.ok) {
         if (onProductSaved) onProductSaved();
-        resetForm();
+        resetImagesState();
       } else {
         // Manejo de otros errores (400, 500, etc.)
         const msg = await extractErrorMessage(response);
@@ -368,34 +325,37 @@ export const useProductForm = (productToEdit, MAX_IMAGES, onProductSaved) => {
 
     } catch (error) {
       console.error("Error guardando producto:", error);
-      setError(error.message || "Ocurrió un error inesperado");
+      const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+      setError(message || "Ocurrió un error inesperado");
     } finally {
-      setIsLoading(false);
+      setIsSubmittingForm(false);
     }
   };
 
   return {
-    productData,
-    newImages,
-    existingImages,
     allCategories,
     allFeatures,
+    allMakes,
+    allPolicies,
     isLoadingCategory,
     isLoadingFeature,
+    isLoadingMake,
+    isLoadingPolicy,
     categoryError,
     featureError,
+    makeError,
+    policyError,
     error,
-    isLoading,
+    isSubmittingForm,
+    newImages,
+    existingImages,
     imageUploadError,
     availableSlots,
     canAddMoreImages,
     fileInputRef,
-    handleChange,
-    handleCategoryCheckListChange,
-    handleFeatureCheckListChange,
     handleNewImageChange,
     handleRemoveExistingImage,
     handleRemoveNewImageFile,
-    handleSubmit,
+    submitProductData
   };
 }

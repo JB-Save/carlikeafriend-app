@@ -50,7 +50,8 @@ export const UserListComponent = () => {
             }
         } catch (error) {
             console.error("Error al obtener usuarios: ", error);
-            setErr(error.message || "Ocurrió un error inesperado.");
+            const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+            setErr(message || "Ocurrió un error inesperado.");
         } finally {
             setIsLoading(false);
         }
@@ -96,7 +97,8 @@ export const UserListComponent = () => {
             }
         } catch (error) {
             console.error("Error al eliminar usuario: ", error);
-            setErrDelete(error.message || "Ocurrió un error inesperado.");
+            const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+            setErrDelete(message || "Ocurrió un error inesperado.");
         } finally {
             setIsDeleting(false);
             setUserIdToDelete(null);
@@ -104,18 +106,18 @@ export const UserListComponent = () => {
     };
 
     return (
-        <div id="user-list-content" className="container-fluid py-2"> {/*Contenido principal de la lista de usuarios  */}
-            <h2 className="h3 fw-bold text-list text-center mt-2">Lista de Usuarios</h2>
+        <div id="user-list-content" className="w-100 py-2"> {/*Contenido principal de la lista de usuarios  */}
+            <h2 className="h3 fw-bold text-list text-center mb-4">Lista de Usuarios</h2>
             {err && <div className="alert alert-danger text-center">{err}</div>}
             {errDelete && <div className={`alert ${errDelete.includes("exitosamente") ? 'alert-success' : 'alert-danger'}  text-center fade show`} style={{ transition: 'opacity 0.5s ease-in-out' }}>{errDelete}</div>}
-            <div className="card card-shadow rounded-3 p-4">
+            <div className="card custom-card-shadow rounded-3 p-4">
                 {isLoading ? (
                     <div className="text-center my-5">
-                        <div className="spinner-border text-primary" role="status"></div>
-                        <p className="mt-2 text-muted">Cargando los Usuarios...</p>
+                        <div className="spinner-border" role="status"></div>
+                        <p className="mt-2 admin-panel-text-muted">Cargando los Usuarios...</p>
                     </div>
                 ) : (!allUsers || allUsers.length === 0) ? (
-                    <div className="text-center text-muted mb-3">No hay usuarios disponibles.</div>
+                    <div className="text-center admin-panel-text-muted mb-3">No hay usuarios disponibles.</div>
                 ) : (
                     <UserTableComponent users={allUsers} setUserIdToDelete={setUserIdToDelete} />
                 )

@@ -5,8 +5,8 @@ import com.carlikeafriend_backend.backend.dto.ProductResponseDTO;
 import com.carlikeafriend_backend.backend.entity.Product;
 import com.carlikeafriend_backend.backend.entity.ProductImage;
 import com.carlikeafriend_backend.backend.event.ImageDeletedEvent;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.exception.ResourceNotFoundException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.repository.IProductRepository;
 import com.carlikeafriend_backend.backend.service.impl.ProductService;
 import com.carlikeafriend_backend.backend.util.FileValidationUtils;
@@ -14,15 +14,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,10 +34,14 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
-    @Mock private IProductRepository productRepository;
-    @Mock private IFileStorageService fileStorageService;
-    @Mock private FileValidationUtils fileValidationUtils;
-    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private IProductRepository productRepository;
+    @Mock
+    private IFileStorageService fileStorageService;
+    @Mock
+    private FileValidationUtils fileValidationUtils;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ProductService productService;
@@ -46,15 +51,21 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
+
+        ProductImage productImage = new ProductImage();
+        productImage.setId(1L);
+        productImage.setImagePath("/image/product_folder/Image.jpg");
+        productImage.setOriginalName("Image.jpg");
+        productImage.setContentType("image/jpeg");
+
         product = new Product();
         product.setId(1L);
         product.setName("Producto Original");
-        product.setImages(new ArrayList<>());
+        product.addImage(productImage);
 
         productDTO = new ProductDTO();
         productDTO.setName("Producto Actualizado");
         productDTO.setDescription("Descripción válida del producto");
-        productDTO.setPrice(100.0);
     }
 
     @Test
@@ -63,7 +74,7 @@ class ProductServiceTest {
         MultipartFile file = new MockMultipartFile("newImage", "newImage.jpg", "image/jpeg", "some-image-bytes".getBytes());
         List<MultipartFile> files = List.of(file);
 
-        when(productRepository.existsByName(anyString())).thenReturn(false);
+        when(productRepository.existsByNameAndDeletedFalse(anyString())).thenReturn(false);
         when(fileStorageService.storeFile(eq(file), anyString())).thenReturn("/image/product_folder/newImage.jpg");
         when(productRepository.save(any(Product.class))).thenAnswer(i -> i.getArgument(0));
 
@@ -78,9 +89,9 @@ class ProductServiceTest {
     @Test
     @DisplayName("Crear Producto - Error si el nombre del producto ya existe")
     void createProduct_ThrowsUniqueName() {
-        when(productRepository.existsByName(anyString())).thenReturn(true);
+        when(productRepository.existsByNameAndDeletedFalse(anyString())).thenReturn(true);
 
-        assertThrows(UniqueNameException.class, () -> productService.saveProduct(productDTO, null));
+        assertThrows(DuplicateResourceException.class, () -> productService.saveProduct(productDTO, null));
         verify(productRepository, never()).save(any());
     }
 
@@ -91,10 +102,10 @@ class ProductServiceTest {
         ProductImage oldImg = new ProductImage();
         oldImg.setId(50L);
         oldImg.setImagePath("/image/product_folder/delete.jpg");
-        product.getImages().add(oldImg);
+        product.addImage(oldImg);
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        when(productRepository.existsByNameAndIdNot(anyString(), anyLong())).thenReturn(false);
+        when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(product));
+        when(productRepository.existsByNameAndIdNotAndDeletedFalse(anyString(), anyLong())).thenReturn(false);
 
         MultipartFile newFile = new MockMultipartFile("newImage", "newImage.jpg", "image/jpeg", "some-image-bytes".getBytes());
         when(fileStorageService.storeFile(eq(newFile), anyString())).thenReturn("/image/product_folder/new.jpg");
@@ -109,23 +120,37 @@ class ProductServiceTest {
     @Test
     @DisplayName("Eliminar Producto - Debería lanzar excepción si no existe")
     void deleteProduct_NotFound() {
-        when(productRepository.findById(1L)).thenReturn(Optional.empty());
+        when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> productService.deleteProduct(1L));
     }
 
     @Test
-    @DisplayName("Eliminar Producto - Éxito y publicación de eventos de borrado de archivos")
-    void deleteProduct_Success() throws IOException {
-        ProductImage img = new ProductImage();
-        img.setImagePath("/image/product_folder/img.jpg");
-        product.getImages().add(img);
+    @DisplayName("Eliminar Producto - Error si tiene vehículos activos (Integridad referencial)")
+    void deleteProduct_HasActiveVehicles_ThrowsException() {
+        Product mockProduct = mock(Product.class);
+        when(mockProduct.hasActiveVehicles()).thenReturn(true);
+        when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(mockProduct));
 
-        when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+        assertThrows(DataIntegrityViolationException.class, () -> productService.deleteProduct(1L));
+        verify(productRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Eliminar Producto - Éxito con limpieza de favoritos y borrado lógico")
+    void deleteProduct_Success() throws IOException {
+        Product spyProduct = spy(product);
+        when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(spyProduct));
 
         productService.deleteProduct(1L);
 
-        verify(productRepository).delete(product);
-        verify(eventPublisher).publishEvent(any(ImageDeletedEvent.class));
+        verify(spyProduct).clearAllFavorites(); // Valida que se limpie la relación de favoritos
+
+        ArgumentCaptor<Product> captor = ArgumentCaptor.forClass(Product.class);
+        verify(productRepository).save(captor.capture());
+
+        Product savedProduct = captor.getValue();
+        assertTrue(savedProduct.isDeleted());
+        assertTrue(savedProduct.getName().contains("_DELETED_")); // Valida mutación del nombre
     }
 }

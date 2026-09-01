@@ -23,7 +23,7 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService(){
-           return username -> userRepository.findByEmailWithRolesAndPermissions(username)
+           return username -> userRepository.findByEmailWithRolesAndPermissionsAndDeleteFalse(username)
                   .orElseThrow(() -> new UsernameNotFoundException("Credenciales incorrectas. Por favor, verifica tu nombre de usuario y contraseña."));
     }
 

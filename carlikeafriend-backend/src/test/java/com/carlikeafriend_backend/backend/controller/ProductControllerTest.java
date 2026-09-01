@@ -2,6 +2,7 @@ package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.ProductDTO;
 import com.carlikeafriend_backend.backend.dto.ProductResponseDTO;
+import com.carlikeafriend_backend.backend.exception.ImageLimitExceededException;
 import com.carlikeafriend_backend.backend.service.IFileStorageService;
 import com.carlikeafriend_backend.backend.service.IJwtService;
 import com.carlikeafriend_backend.backend.service.IProductService;
@@ -51,7 +52,7 @@ class ProductControllerTest {
 
     @MockitoBean
     private UserDetailsService userDetailsService;
-    // ---------------------------------------------------------------------
+
 
     private ProductDTO productDTO;
     private ProductResponseDTO productResponseDTO;
@@ -60,8 +61,11 @@ class ProductControllerTest {
     void setUp() {
         productDTO = new ProductDTO();
         productDTO.setName("Producto de Prueba");
+        productDTO.setMakeId(1L);
         productDTO.setDescription("Esta es una descripción válida de más de diez caracteres.");
-        productDTO.setPrice(150.0);
+        productDTO.setPassengerCapacity(4);
+        productDTO.setBaggageCapacity(2);
+        productDTO.setNumberOfDoors(4);
 
         productResponseDTO = new ProductResponseDTO();
         productResponseDTO.setId(1L);
@@ -75,12 +79,12 @@ class ProductControllerTest {
         List<ProductResponseDTO> productList = List.of(productResponseDTO);
 
         // Ajustamos el mock para devolver la lista
-        when(productService.findAllFilteredProducts(any(), any(), any(), any(), any()))
+        when(productService.getAllFilteredProducts(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(productList);
 
-        mockMvc.perform(get("/carlikeafriend/products/filter")
-                        .param("minPrice", "100")
-                        .param("maxPrice", "500"))
+        mockMvc.perform(get("/carlikeafriend/products/filters")
+                        .param("minPrice", "150")
+                        .param("maxPrice", "150"))
                 .andExpect(status().isOk())
                 // Si devuelve una lista, el JSON path empieza directamente en la raíz $
                 .andExpect(jsonPath("$[0].name").value("Producto de Prueba"));
@@ -89,8 +93,7 @@ class ProductControllerTest {
     @Test
     @DisplayName("POST /products - Debería crear un producto exitosamente con imágenes")
     void createProduct_Success() throws Exception {
-        // 1. Preparar el DTO y el JSON
-        productDTO.setName("Producto de Prueba");
+        // 1. Preparar el JSON
         byte[] productJson = objectMapper.writeValueAsBytes(productDTO);
 
         // 2. Crear las partes de la petición
@@ -123,14 +126,28 @@ class ProductControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("Producto de Prueba"));
 
-        // Verificación opcional de que el servicio fue llamado
+        // Verificación de que el servicio fue llamado
         verify(productService, times(1)).saveProduct(any(ProductDTO.class), any());
     }
 
     @Test
-    @DisplayName("POST /products - Error 400 cuando el DTO es inválido (Nombre corto)")
+    @DisplayName("POST /products - Error 400 por exceder límite de imágenes")
+    void createProduct_ImageLimitExceeded_Returns400() throws Exception {
+        MockMultipartFile productPart = new MockMultipartFile("product", "", MediaType.APPLICATION_JSON_VALUE, objectMapper.writeValueAsBytes(productDTO));
+
+        when(productService.saveProduct(any(ProductDTO.class), any()))
+                .thenThrow(new ImageLimitExceededException("Límite de imágenes excedido"));
+
+        mockMvc.perform(multipart("/carlikeafriend/products")
+                        .file(productPart)
+                        .with(csrf()))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /products - Error 400 cuando el DTO es inválido (Nombre excede 100 carateres)")
     void createProduct_BadRequest_Validation() throws Exception {
-        productDTO.setName("Ab"); // Invalida @Size(min=3)
+        productDTO.setName("Nombre - extremadamente - larguisimo. - Con - más - de - cien (100) - carateres. - En - este - caso - 106"); // Invalida @Size(max=100)
         MockMultipartFile productPart = new MockMultipartFile("product", "", "application/json",
                 objectMapper.writeValueAsBytes(productDTO));
 

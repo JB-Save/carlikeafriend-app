@@ -5,10 +5,12 @@ import jakarta.validation.constraints.Size;
 
 public class PermissionDTO {
 
-    @NotBlank(message = "El permiso no puede estar vacío")
-    @Size(min = 6, max = 25, message = "El permiso debe tener entre 6 a 25 caracteres")
+    @NotBlank(message = "El permiso es obligatorio")
+    @Size(max = 25, message = "El permiso no debe exceder los 25 caracteres")
     private String name;
-    @Size(min = 10, max = 100, message = "La descripción debe tener entre 10 a 100 caracteres")
+
+    @NotBlank(message = "La descripción es obligatoria")
+    @Size(max = 100, message = "La descripción no debe exceder los 100 caracteres")
     private String description;
 
     public PermissionDTO() {

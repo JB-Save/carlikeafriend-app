@@ -49,7 +49,8 @@ export const FeatureListComponent = () => {
             }
         } catch (error) {
             console.error("Error al obtener características: ", error);
-            setErr(error.message || "Ocurrió un error inesperado.");
+            const message = error.message.includes("Failed to fetch") ? "Error de conexión: Revisa tu internet." : error.message;
+            setErr(message || "Ocurrió un error inesperado.");
         } finally {
             setIsLoading(false);
         }
@@ -93,7 +94,8 @@ export const FeatureListComponent = () => {
             }
         } catch (error) {
             console.error("Error al eliminar característica: ", error);
-            setErrDelete(error.message || "Ocurrió un error inesperado.");
+            const message = error.message.includes("Failed to fetch") ? "Error de conexión: Revisa tu internet." : error.message;
+            setErrDelete(message || "Ocurrió un error inesperado.");
         } finally {
             setIsDeleting(false);
             setFeatureIdToDelete(null);
@@ -101,21 +103,23 @@ export const FeatureListComponent = () => {
     };
 
     return (
-        <div id="feature-list-content" className="container-fluid py-2"> {/*Contenido principal de la lista de características  */}
-            <Link to="/administration/add-feature" className="text-decoration-none d-block py-2 px-2 rounded btn-add text-center">
-                <i className="bi bi-plus-circle-fill me-2"></i> Agregar Característica
-            </Link>
-            <h2 className="h3 fw-bold text-list text-center mt-2">Lista de Características Disponibles</h2>
+        <div id="feature-list-content" className="w-100 py-2"> {/*Contenido principal de la lista de características  */}
+            <div className="d-flex justify-content-center justify-content-md-end mb-3">
+                <Link to="/administration/add-feature" className="text-decoration-none py-2 px-2 rounded-3 btn btn-add text-center">
+                    <i className="bi bi-plus-circle-fill me-2"></i> Agregar Característica
+                </Link>
+            </div>
+            <h2 className="h3 fw-bold text-list text-center mb-4">Lista de Características Disponibles</h2>
             {err && <div className="alert alert-danger text-center">{err}</div>}
             {errDelete && <div className={`alert ${errDelete.includes("exitosamente") ? 'alert-success' : 'alert-danger'}  text-center fade show`} style={{ transition: 'opacity 0.5s ease-in-out' }}>{errDelete}</div>}
-            <div className="card card-shadow rounded-3 p-4">
+            <div className="card custom-card-shadow rounded-3 p-4">
                 {isLoading ? (
                     <div className="text-center my-5">
-                        <div className="spinner-border text-primary" role="status"></div>
-                        <p className="mt-2 text-muted">Cargando características...</p>
+                        <div className="spinner-border" role="status"></div>
+                        <p className="mt-2 admin-panel-text-muted">Cargando características...</p>
                     </div>
                 ) : (!allFeatures || allFeatures.length === 0) ? (
-                    <div className="text-center text-muted mb-3">No hay características disponibles.</div>
+                    <div className="text-center admin-panel-text-muted mb-3">No hay características disponibles.</div>
                 ) : (
                     <FeatureTableComponent features={allFeatures} setFeatureIdToDelete={setFeatureIdToDelete} />
                 )

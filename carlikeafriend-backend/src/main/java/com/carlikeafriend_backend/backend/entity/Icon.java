@@ -3,6 +3,8 @@ package com.carlikeafriend_backend.backend.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
+import java.util.Objects;
+
 @Entity
 @Table(name = "icon")
 public class Icon {
@@ -15,7 +17,8 @@ public class Icon {
     private String contentType;
 
     @OneToOne(mappedBy = "icon")
-    @JsonIgnore // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
+    @JsonIgnore
+    // Esta anotación le indica a Jackson que ignore este campo durante la serialización a JSON sin anidamientos recursivos
     private Feature feature;
 
     public Icon() {
@@ -58,6 +61,36 @@ public class Icon {
     }
 
     public void setFeature(Feature feature) {
-        this.feature = feature;
+
+        if (this.feature == feature) return; // 1. Cláusula de guarda
+
+        Feature oldFeature = this.feature;
+        this.feature = feature; // 2. Asignar nuevo valor
+
+        // 3. Sincronización bidireccional
+        if (oldFeature != null && oldFeature.getIcon() == this) {
+            oldFeature.setIcon(null);
+        }
+        if (feature != null && feature.getIcon() != this) {
+            feature.setIcon(this);
+        }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof Icon that)) return false;
+
+        if (this.id == null || that.getId() == null) {
+            return false;
+        }
+
+        return Objects.equals(this.id, that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
     }
 }

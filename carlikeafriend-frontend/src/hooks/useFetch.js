@@ -23,7 +23,7 @@ export const useFetch = () => {
             const options = {
                 method: method,
                 headers: {
-                    'Content-type': 'application/json; charset=UTF-8',
+                    'Content-type': 'application/json',
                 },
                 body: method == 'GET' || method == 'DELETE' ? null : JSON.stringify(bodyData)
             }

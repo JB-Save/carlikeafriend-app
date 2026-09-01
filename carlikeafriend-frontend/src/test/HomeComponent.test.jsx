@@ -1,8 +1,6 @@
-import { render, screen } from '@testing-library/react';
-import { vi } from 'vitest';
+import { render, screen } from '../utils/test-utils'; 
+import { vi, describe, it, expect } from 'vitest';
 import { HomeComponent } from '../pages/HomeComponent';
-import { SearchSection } from '../components/SearchSection';
-import { RecommendationSection } from '../components/RecommendationSection';
 
 // Simular todos los componentes secundarios para aislar HomeComponent para pruebas.
 // Esto nos permite comprobar si se renderizan sin ejecutar su lógica interna.
@@ -11,7 +9,10 @@ vi.mock('../components/WelcomeSection', () => ({
 }));
 
 vi.mock('../components/SearchSection', () => ({
-  SearchSection: vi.fn(() => <div data-testid="search-section"></div>),
+  // Capturamos las props y las renderizamos en el atributo data-props
+  SearchSection: (props) => (
+    <div data-testid="search-section" data-props={JSON.stringify(props)}></div>
+  ),
 }));
 
 vi.mock('../components/CategoriesSection', () => ({
@@ -19,15 +20,13 @@ vi.mock('../components/CategoriesSection', () => ({
 }));
 
 vi.mock('../components/RecommendationSection', () => ({
-  RecommendationSection: vi.fn(() => <div data-testid="recommendation-section"></div>),
+  RecommendationSection: (props) => (
+    <div data-testid="recommendation-section" data-props={JSON.stringify(props)}></div>
+  ),
 }));
 
 describe('HomeComponent', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-// Verifica que todas las secciones secundarias se representen correctamente.
+  // Verifica que todas las secciones secundarias se representen correctamente.
   it('Debe representar todas las secciones de componentes', () => {
     render(<HomeComponent />);
     expect(screen.getByTestId('welcome-section')).toBeInTheDocument();
@@ -39,18 +38,24 @@ describe('HomeComponent', () => {
   // Verifica que se pasen las props correctas a SearchSection.
   it('Debe pasar las props correctas a SearchSection', () => {
     render(<HomeComponent />);
-    expect(SearchSection).toHaveBeenCalledWith(
-      { productsPerPage: 10, type: 'search' },
-       undefined
-    );
+    const searchSection = screen.getByTestId('search-section');
+    const props = JSON.parse(searchSection.getAttribute('data-props'));
+
+    expect(props).toEqual({
+      productsPerPage: 10,
+      type: 'search'
+    });
   });
 
   // Verifica que se pasen las props correctas a RecommendationsSection.
   it('Debe pasar las props correctas a RecommendationSection', () => {
     render(<HomeComponent />);
-    expect(RecommendationSection).toHaveBeenCalledWith(
-      { productsPerPage: 4, type: 'recommendation' },
-       undefined
-    );
+    const recommendationSection = screen.getByTestId('recommendation-section');
+    const props = JSON.parse(recommendationSection.getAttribute('data-props'));
+
+    expect(props).toEqual({
+      productsPerPage: 4,
+      type: 'recommendation'
+    });
   });
 });

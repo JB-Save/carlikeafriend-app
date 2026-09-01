@@ -8,6 +8,7 @@
         .header { font-size: 24px; color: #333; }
         .content { margin-top: 20px; }
         .info { background-color: #f9f9f9; padding: 15px; border-radius: 4px; }
+        .detail {list-style-type: none; padding: 0;}
         .button {
             display: inline-block;
             padding: 12px 20px;
@@ -19,20 +20,23 @@
             font-weight: bold;
         }
     </style>
+    <title>Confirmación de Registro</title>
 </head>
 <body>
 <div class="container">
     <!-- Mensaje claro -->
-    <div class="header" th:text="'¡Hola, ' + ${username} + '! Bienvenido.'">¡Hola, [Usuario]! Bienvenido.</div>
+    <div class="header" th:text="'¡Hola, ' + ${userName} + '! Bienvenido.'">¡Hola, [Usuario]! Bienvenido.</div>
 
     <div class="content">
         <p>Tu registro en Car Like A Friend ha sido completado exitosamente.</p>
 
         <!-- Confirmación de información -->
         <div class="info">
-            <p><strong>Detalles de tu cuenta:</strong></p>
-            <p><strong>Nombre de Usuario:</strong> <span th:text="${username}">[username]</span></p>
-            <p><strong>Correo Electrónico:</strong> <span th:text="${email}">[email]</span></p>
+            <h3>Detalles de tu cuenta:</h3>
+            <ul class="detail">
+                <li><strong>Nombre de Usuario:</strong> <span th:text="${userName}">[userName]</span></li>
+                <li><strong>Correo Electrónico:</strong> <span th:text="${email}">[email]</span></li>
+            </ul>
         </div>
 
         <p>Es un gusto de tenerte con nosotros. Para comenzar, por favor inicia sesión en tu cuenta:</p>

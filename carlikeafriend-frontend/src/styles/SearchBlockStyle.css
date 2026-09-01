@@ -1,0 +1,88 @@
+/* Contenedor del Buscador */
+ .search-block-container {
+     background-color: #ffffff;
+     max-width: 1000px;
+     margin-top: -60px;
+     /* Para que suba un poco sobre la imagen de bienvenida */
+     z-index: 10;
+ }
+
+ .search-btn {
+     /* Cambia el color del fondo*/
+     background-color: #1f88e6;
+     /* Cambia el color del borde*/
+     border-color: #2e2e84;
+     /* Cambia el color del texto */
+     color: #f4f3f2;
+ }
+
+ .search-btn-hover:hover {
+     background-color: #2e2e84 !important;
+     color: #f4f3f2 !important;
+ }
+
+ .search-block-title-color{
+    color: #2e2e84;
+ }
+
+ .search-block-text-primary {
+     color: #1f88e6 !important;
+ }
+
+ .search-block-text-muted {
+     color: #6a5e9b !important;
+ }
+
+ .search-input-group {
+     border: 1px solid #6a5e9b;
+     border-radius: 0.5rem;
+     overflow: hidden;
+     background-color: #f8f9fa;
+ }
+
+ .search-input {
+     border: none !important;
+     background-color: transparent !important;
+     color: #2e2e84;
+ }
+
+ .search-icon-bg {
+     background-color: transparent !important;
+     border: none !important;
+ }
+
+ .search-input:focus {
+     box-shadow: none !important;
+ }
+
+ /* Hover de Sucursales en el buscador */
+ .branch-hover {
+     cursor: pointer;
+     color: #6a5e9b;
+     transition: background-color 0.2s;
+ }
+
+ .branch-hover:hover {
+     background-color: #e9ecef;
+     color: #1f88e6;
+ }
+
+  /* Rescate del Datepicker ante Tailwind/Bootstrap */
+ .react-datepicker-popper {
+     z-index: 9999 !important;
+     /* Asegura que flote sobre todo */
+ }
+
+ .react-datepicker {
+     font-family: inherit !important;
+     border: 1px solid #ced4da !important;
+     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+ }
+
+ /* Evita que el contenedor estropee el input-group */
+ .react-datepicker-wrapper {
+     display: block !important;
+     width: 100% !important;
+ }
+
+ 

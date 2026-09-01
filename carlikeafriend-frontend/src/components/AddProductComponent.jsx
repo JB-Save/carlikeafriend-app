@@ -28,12 +28,12 @@ export const AddProductComponent = () => {
 
   return (
 
-    <div col="row">
-      <div className="col-12 col-md-8 mx-auto">
-        <div className="card card-shadow card-background p-4">
-          <h1 className="fs-3 fw-bold text-center form-title mb-4">
-            {productToEdit ? 'Editar Producto' : 'Crear Producto'}
-          </h1>
+    <div className="row">
+      <div className="col-12 col-md-10 mx-auto">
+        <div className="card custom-card-shadow custom-card-background p-4 p-md-5">
+          <h4 className="fw-bold text-center form-title mb-4">
+            {productToEdit ? 'Edición de Producto' : 'Registro de Nuevo Producto'}
+          </h4>
           <ProductForm
             productToEdit={productToEdit}
             onProductSaved={handleProductSaved}

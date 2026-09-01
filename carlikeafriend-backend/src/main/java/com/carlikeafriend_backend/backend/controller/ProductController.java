@@ -1,15 +1,16 @@
 package com.carlikeafriend_backend.backend.controller;
 
 import com.carlikeafriend_backend.backend.dto.ProductResponseDTO;
+import com.carlikeafriend_backend.backend.exception.DuplicateResourceException;
 import com.carlikeafriend_backend.backend.exception.InvalidFileExtensionException;
 import org.springframework.core.io.Resource;
 import com.carlikeafriend_backend.backend.dto.ProductDTO;
 import com.carlikeafriend_backend.backend.exception.ImageLimitExceededException;
-import com.carlikeafriend_backend.backend.exception.UniqueNameException;
 import com.carlikeafriend_backend.backend.service.IFileStorageService;
 import com.carlikeafriend_backend.backend.service.IProductService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -19,7 +20,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -27,7 +30,6 @@ import java.util.Optional;
 public class ProductController {
 
     private final IProductService productService;
-
     private final IFileStorageService fileStorageService;
 
     @Autowired
@@ -39,44 +41,62 @@ public class ProductController {
     @PostMapping("/products")
     public ResponseEntity<ProductResponseDTO> saveProduct(@RequestPart("product") @Valid ProductDTO productDTO,
                                                           @RequestPart(value = "images", required = false) List<MultipartFile> imageFiles)
-            throws UniqueNameException, ImageLimitExceededException, InvalidFileExtensionException, IOException {
+            throws DuplicateResourceException, ImageLimitExceededException, InvalidFileExtensionException, IOException {
         ProductResponseDTO savedProduct = productService.saveProduct(productDTO, imageFiles);
         return new ResponseEntity<>(savedProduct, HttpStatus.CREATED);
     }
 
     @GetMapping("/products")
-    public ResponseEntity<List<ProductResponseDTO>> findAllProducts() {
-        return new ResponseEntity<>(productService.findAllProducts(), HttpStatus.OK);
+    public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
+        return new ResponseEntity<>(productService.getAllProducts(), HttpStatus.OK);
     }
 
-    @GetMapping("/products/filter")
+    @GetMapping("/products/home-catalogues")
+    public ResponseEntity<List<ProductResponseDTO>> getHomeCatalog() {
+        return new ResponseEntity<>(productService.getHomeCatalog(), HttpStatus.OK);
+    }
+
+    @GetMapping("/products/price-ranges")
+    public ResponseEntity<Map<String, Double>> getCatalogPriceRange() {
+        return new ResponseEntity<>(productService.getCatalogPriceRange(), HttpStatus.OK);
+    }
+
+    @GetMapping("/products/filters")
     public ResponseEntity<List<ProductResponseDTO>> getFilteredProducts(
             @RequestParam(required = false) List<Long> categoryIds,
             @RequestParam(required = false) List<Long> featureIds,
+            @RequestParam(required = false) Long branchId,
+            @RequestParam(required = false) Long returnBranchId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime pickupDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime returnDate,
             @RequestParam(required = false) Double minPrice,
             @RequestParam(required = false) Double maxPrice,
-            @RequestParam(required = false) String sortBy
+            @RequestParam(required = false, defaultValue = "price_asc") String sortBy
     ) {
 
-        List<ProductResponseDTO> filteredProducts = productService.findAllFilteredProducts(
+        List<ProductResponseDTO> filteredProducts = productService.getAllFilteredProducts(
                 categoryIds,
                 featureIds,
+                branchId,
+                returnBranchId,
+                pickupDate,
+                returnDate,
                 minPrice,
                 maxPrice,
                 sortBy);
 
-        return ResponseEntity.ok(filteredProducts);
+        return new ResponseEntity<>(filteredProducts, HttpStatus.OK);
 
     }
 
     @GetMapping("/products/recommended-products")
-    public ResponseEntity<List<ProductResponseDTO>> findAllRecommendedProducts() {
-        return new ResponseEntity<>(productService.findAllProducts(), HttpStatus.OK);
+    public ResponseEntity<List<ProductResponseDTO>> getAllRecommendedProducts() {
+        return new ResponseEntity<>(productService.getAllRecommendedProducts(), HttpStatus.OK);
     }
 
     @GetMapping("/products/{id}")
-    public ResponseEntity<ProductResponseDTO> findProductById(@PathVariable Long id) {
-        Optional<ProductResponseDTO> productDTO = productService.findProductById(id);
+    public ResponseEntity<ProductResponseDTO> getProductById(@PathVariable Long id) {
+        Optional<ProductResponseDTO> productDTO = productService.getProductById(id);
         return productDTO.map(dto -> new ResponseEntity<>(dto, HttpStatus.OK))
                 .orElseGet(() -> new ResponseEntity<>(HttpStatus.NOT_FOUND));
     }
@@ -88,11 +108,10 @@ public class ProductController {
             @RequestPart("product") @Valid ProductDTO productDTO,
             @RequestPart(value = "newImageFiles", required = false) List<MultipartFile> newImageFiles,
             @RequestPart(value = "imagesToDelete", required = false) List<Long> imagesToDeleteIds)
-            throws UniqueNameException, ImageLimitExceededException, IOException {
+            throws DuplicateResourceException, ImageLimitExceededException, IOException {
 
         ProductResponseDTO updatedProduct = productService.updateProduct(id, productDTO, newImageFiles, imagesToDeleteIds);
         return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
-
     }
 
     @DeleteMapping("/products/{id}")

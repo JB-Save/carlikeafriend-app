@@ -5,15 +5,21 @@ public class CategoryResponseDTO {
     private Long id;
     private String name;
     private String description;
+    private Double baseDailyRate;
+    private Integer priority;
+    private Double baseDepositAmount;
     private ImageDTO categoryImage;
 
     public CategoryResponseDTO() {
     }
 
-    public CategoryResponseDTO(Long id, String name, String description, ImageDTO categoryImage) {
+    public CategoryResponseDTO(Long id, String name, String description, Double baseDailyRate, Integer priority, Double baseDepositAmount, ImageDTO categoryImage) {
         this.id = id;
         this.name = name;
         this.description = description;
+        this.baseDailyRate = baseDailyRate;
+        this.priority = priority;
+        this.baseDepositAmount = baseDepositAmount;
         this.categoryImage = categoryImage;
     }
 
@@ -39,6 +45,30 @@ public class CategoryResponseDTO {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Double getBaseDailyRate() {
+        return baseDailyRate;
+    }
+
+    public void setBaseDailyRate(Double baseDailyRate) {
+        this.baseDailyRate = baseDailyRate;
+    }
+
+    public Integer getPriority() {
+        return priority;
+    }
+
+    public void setPriority(Integer priority) {
+        this.priority = priority;
+    }
+
+    public Double getBaseDepositAmount() {
+        return baseDepositAmount;
+    }
+
+    public void setBaseDepositAmount(Double baseDepositAmount) {
+        this.baseDepositAmount = baseDepositAmount;
     }
 
     public ImageDTO getCategoryImage() {

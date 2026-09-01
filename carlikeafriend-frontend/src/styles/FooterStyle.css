@@ -1,49 +1,58 @@
- /* Estilos para el footer */
  footer {
-     /* Color de fondo para el footer */
      background-color: #6a5e9b;
-     /* Sombra superior */
-     box-shadow: 0 -0.125rem 0.25rem rgba(46, 46, 132, 0.8);
-     /* Padding superior e inferior */
-     padding: 1.5rem 0;
+     /* Sombra superior más difuminada */
+     box-shadow: 0 -4px 20px rgba(46, 46, 132, 0.1);
+     padding: 2.5rem 0;
+     /* Un poco más de "aire" vertical */
+     margin-top: 3rem;
+     /* Asegura separación del contenido superior */
  }
 
  .social-icons a {
-     /* Color de los iconos sociales */
-     color: #f4f3f2;
-     /* Tamaño de los iconos */
+     color: rgba(244, 243, 242, 0.8);
+     /* Blanco ligeramente transparente */
      font-size: 1.5rem;
-     /* Espacio entre iconos */
-     margin-left: 1rem;
-     transition: color 0.2s ease-in-out;
+     margin-left: 1.25rem;
+     display: inline-flex;
+     align-items: center;
+     justify-content: center;
+     width: 40px;
+     height: 40px;
+     border-radius: 50%;
+     background-color: rgba(255, 255, 255, 0.05);
+     /* Fondo circular muy sutil */
+     transition: all 0.3s ease;
  }
 
  .social-icons a:hover {
-     /* Color al pasar el ratón */
-     color: #2e2e84;
+     color: #1f88e6;
+     /* Cambiamos a tu azul brillante para llamar a la acción */
+     background-color: #ffffff;
+     /* Fondo blanco al hacer hover */
+     transform: translateY(-3px);
+     /* Efecto de elevación */
  }
 
  .text-copy-right {
-    /* Color del texto del copy-right */
-     color: #f4f3f2;
+     color: rgba(244, 243, 242, 0.7);
+     /* Tipografía sutil para el copyright */
+     font-weight: 300;
  }
 
  .footer-logo-img {
-    /* ato y ancho del logo */
-     height: 18%;
-     width: 18%;
+     height: 45px;
+     width: auto;
+     border: none;
  }
 
  .footer-logo-text {
-     /* Negrita para el logo */
-     font-weight: 700;
-     /* Color para el texto del logo */
+     font-weight: 800;
      color: #f4f3f2;
+     letter-spacing: -0.5px;
  }
 
  .footer-slogan-text {
-     /* tamaño para el lema */
+     color: #70acde;
+     /* Azul claro de tu paleta */
      font-weight: 400;
-     /* Color para el lema */
-     color: #f4f3f2;
  }

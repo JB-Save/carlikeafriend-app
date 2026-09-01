@@ -50,7 +50,8 @@ export const CategoryListComponent = () => {
             }
         } catch (error) {
             console.error("Error al obtener categorías: ", error);
-            setErr(error.message || "Ocurrió un error inesperado.");
+            const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+            setErr(message || "Ocurrió un error inesperado.");
         } finally {
             setIsLoading(false);
         }
@@ -95,7 +96,8 @@ export const CategoryListComponent = () => {
             }
         } catch (error) {
             console.error("Error al eliminar categoría: ", error);
-            setErrDelete(error.message || "Ocurrió un error inesperado.");
+            const message = error.message.includes("Failed to fetch") ? "No se pudo establecer conexión con el servidor." : error.message;
+            setErrDelete(message || "Ocurrió un error inesperado.");
         } finally {
             setIsDeleting(false);
             setCategoryIdToDelete(null);
@@ -103,21 +105,23 @@ export const CategoryListComponent = () => {
     };
 
     return (
-        <div id="category-list-content" className="container-fluid py-2"> {/*Contenido principal de la lista de categorías  */}
-            <Link to="/administration/add-category" className="text-decoration-none d-block py-2 px-2 rounded btn-add text-center">
-                <i className="bi bi-plus-circle-fill me-2"></i> Agregar Categoría
-            </Link>
-            <h2 className="h3 fw-bold text-list text-center mt-2">Lista de Categorías Disponibles</h2>
+        <div id="category-list-content" className="w-100 py-2"> {/*Contenido principal de la lista de categorías  */}
+            <div className="d-flex justify-content-center justify-content-md-end mb-3">
+                <Link to="/administration/add-category" className="text-decoration-none py-2 px-2 rounded-3 btn btn-add text-center">
+                    <i className="bi bi-plus-circle-fill me-2"></i> Agregar Categoría
+                </Link>
+            </div>
+            <h2 className="h3 fw-bold text-list text-center mb-4">Lista de Categorías Disponibles</h2>
             {err && <div className="alert alert-danger text-center">{err}</div>}
             {errDelete && <div className={`alert ${errDelete.includes("exitosamente") ? 'alert-success' : 'alert-danger'}  text-center fade show`} style={{ transition: 'opacity 0.5s ease-in-out' }}>{errDelete}</div>}
-            <div className="card card-shadow rounded-3 p-4">
+            <div className="card custom-card-shadow rounded-3 p-4">
                 {isLoading ? (
                     <div className="text-center my-5">
-                        <div className="spinner-border text-primary" role="status"></div>
-                        <p className="mt-2 text-muted">Cargando categorías...</p>
+                        <div className="spinner-border" role="status"></div>
+                        <p className="mt-2 admin-panel-text-muted">Cargando categorías...</p>
                     </div>
                 ) : (!allCategories || allCategories.length === 0) ? (
-                    <div className="text-center text-muted mb-3">No hay categorías disponibles.</div>
+                    <div className="text-center admin-panel-text-muted mb-3">No hay categorías disponibles.</div>
                 ) : (
                     <CategoryTableComponent categories={allCategories} setCategoryIdToDelete={setCategoryIdToDelete} />
                 )

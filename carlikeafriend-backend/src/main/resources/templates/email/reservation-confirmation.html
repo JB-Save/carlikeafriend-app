@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { width: 90%; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .header { font-size: 24px; color: #2c3e50; }
+        .content { margin-top: 20px; }
+        .info { background-color: #f9f9f9; padding: 15px; border-radius: 4px; margin: 20px 0;}
+        .detail { list-style-type: none; padding: 0; }
+    </style>
+    <title>Confirmación de Reserva</title>
+</head>
+<body>
+<div class="container">
+    <div class="header">¡Reserva Confirmada, <span th:text="${userName}">[userName]</span>!</div>
+
+    <div class="content">
+        <p>Tu reserva para el vehículo <strong><span th:text="${vehicleName}">[vehicleName]</span></strong> ha sido
+            confirmada con éxito.</p>
+
+        <div class="info">
+            <h3>Detalles de tu alquiler:</h3>
+            <ul style="list-style-type: none; padding: 0;">
+                <li><strong>Código de Reserva:</strong> <span th:text="${reservationId}">[reservationId]</span></li>
+                <li><strong>Fecha de Recogida:</strong> <span th:text="${pickupDate}">[pickupDate]</span></li>
+                <li><strong>Fecha de Entrega:</strong> <span th:text="${returnDate}">[returnDate]</span></li>
+                <li><strong>Sucursal de Recogida:</strong> <span th:text="${pickupBranch}">[pickupBranch]</span></li>
+            </ul>
+        </div>
+
+        <p>Gracias por confiar en Carlikeafriend. ¡Buen viaje!</p>
+    </div>
+</body>
+</html>
